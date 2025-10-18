@@ -3,6 +3,7 @@
 namespace Botble\Ecommerce\Cart;
 
 use Botble\Base\Enums\BaseStatusEnum;
+use Botble\Base\Facades\BaseHelper;
 use Botble\Base\Models\BaseModel;
 use Botble\Ecommerce\Cart\Contracts\Buyable;
 use Botble\Ecommerce\Cart\Exceptions\CartAlreadyStoredException;
@@ -10,9 +11,11 @@ use Botble\Ecommerce\Cart\Exceptions\UnknownModelException;
 use Botble\Ecommerce\Facades\EcommerceHelper;
 use Botble\Ecommerce\Models\Tax;
 use Botble\Ecommerce\Repositories\Interfaces\ProductInterface;
+use Botble\Ecommerce\Services\HandleApplyProductCrossSaleService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Closure;
+use Exception;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
@@ -43,7 +46,7 @@ class Cart
         $this->instance(self::DEFAULT_INSTANCE);
     }
 
-    public function instance(string $instance = null): self
+    public function instance(?string $instance = null): self
     {
         $instance = $instance ?: self::DEFAULT_INSTANCE;
 
@@ -290,7 +293,7 @@ class Cart
     {
         $content = $this->getContent();
 
-        return $content->reduce(function ($total, ?CartItem $cartItem) {
+        $total = $content->reduce(function ($total, ?CartItem $cartItem) {
             if (! $cartItem) {
                 return 0;
             }
@@ -299,8 +302,16 @@ class Cart
                 return $total + $cartItem->qty * $cartItem->price;
             }
 
+            $priceIncludesTax = $cartItem->options->get('price_includes_tax', false);
+
+            if ($priceIncludesTax) {
+                return $total + $cartItem->qty * $cartItem->price;
+            }
+
             return $total + ($cartItem->qty * ($cartItem->priceTax == 0 ? $cartItem->price : $cartItem->priceTax));
         }, 0);
+
+        return apply_filters('ecommerce_cart_raw_total', $total, $content);
     }
 
     public function rawTotalByItems($content): float
@@ -314,6 +325,12 @@ class Cart
                 return $total + $cartItem->qty * $cartItem->price;
             }
 
+            $priceIncludesTax = $cartItem->options->get('price_includes_tax', false);
+
+            if ($priceIncludesTax) {
+                return $total + $cartItem->qty * $cartItem->price;
+            }
+
             return $total + ($cartItem->qty * ($cartItem->priceTax == 0 ? $cartItem->price : $cartItem->priceTax));
         }, 0);
     }
@@ -324,24 +341,54 @@ class Cart
             return 0;
         }
 
-        return $content->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + ($cartItem->qty * $cartItem->tax);
-        }, 0);
+        $totalTax = 0;
+        foreach ($content as $cartItem) {
+            $taxRate = $cartItem->taxRate;
+            if ($taxRate > 0) {
+                $priceIncludesTax = $cartItem->options->get('price_includes_tax', false);
+
+                if ($priceIncludesTax) {
+                    $totalTax += EcommerceHelper::roundPrice($cartItem->qty * ($cartItem->price - ($cartItem->price / (1 + $taxRate / 100))));
+                } else {
+                    $totalTax += EcommerceHelper::roundPrice($cartItem->price * $cartItem->qty * ($taxRate / 100));
+                }
+            }
+        }
+
+        return $totalTax;
     }
 
     public function rawSubTotal(): float
     {
         $content = $this->getContent();
 
-        return $content->reduce(function ($subTotal, CartItem $cartItem) {
-            return $subTotal + ($cartItem->qty * $cartItem->price);
+        $subTotal = $content->reduce(function ($subTotal, CartItem $cartItem) {
+            $priceIncludesTax = $cartItem->options->get('price_includes_tax', false);
+
+            if ($priceIncludesTax && $cartItem->taxRate > 0) {
+                $basePrice = $cartItem->price / (1 + $cartItem->taxRate / 100);
+
+                return $subTotal + EcommerceHelper::roundPrice($cartItem->qty * $basePrice);
+            }
+
+            return $subTotal + EcommerceHelper::roundPrice($cartItem->qty * $cartItem->price);
         }, 0);
+
+        return apply_filters('ecommerce_cart_raw_subtotal', $subTotal, $content);
     }
 
     public function rawSubTotalByItems($content): float
     {
         return $content->reduce(function ($subTotal, CartItem $cartItem) {
-            return $subTotal + ($cartItem->qty * $cartItem->price);
+            $priceIncludesTax = $cartItem->options->get('price_includes_tax', false);
+
+            if ($priceIncludesTax && $cartItem->taxRate > 0) {
+                $basePrice = $cartItem->price / (1 + $cartItem->taxRate / 100);
+
+                return $subTotal + EcommerceHelper::roundPrice($cartItem->qty * $basePrice);
+            }
+
+            return $subTotal + EcommerceHelper::roundPrice($cartItem->qty * $cartItem->price);
         }, 0);
     }
 
@@ -402,19 +449,26 @@ class Cart
 
     public function store(string $identifier): void
     {
-        $content = $this->getContent();
-
         if ($this->storedCartWithIdentifierExists($identifier)) {
-            throw new CartAlreadyStoredException('A cart with identifier ' . $identifier . ' was already stored.');
+            throw new CartAlreadyStoredException(sprintf('A cart with identifier %s was already stored.', $identifier));
         }
 
         $this->getConnection()->table($this->getTableName())->insert([
             'identifier' => $identifier,
             'instance' => $this->currentInstance(),
-            'content' => serialize($content),
+            'content' => serialize($this->getContent()),
         ]);
 
         static::dispatchEvent('cart.stored');
+    }
+
+    public function storeOrIgnore(string $identifier): void
+    {
+        if ($this->storedCartWithIdentifierExists($identifier)) {
+            return;
+        }
+
+        $this->store($identifier);
     }
 
     public function storeQuietly($identifier)
@@ -457,29 +511,36 @@ class Cart
             return;
         }
 
-        $stored = $this->getConnection()->table($this->getTableName())
+        $stored = $this
+            ->getConnection()
+            ->table($this->getTableName())
             ->where('identifier', $identifier)->first();
 
-        $storedContent = unserialize($stored->content);
+        if ($stored) {
+            $storedContent = unserialize($stored->content);
 
-        $currentInstance = $this->currentInstance();
+            $currentInstance = $this->currentInstance();
 
-        $this->instance($stored->instance);
+            $this->instance($stored->instance);
 
-        $content = $this->getContent();
+            $content = $this->getContent();
 
-        foreach ($storedContent as $cartItem) {
-            $content->put($cartItem->rowId, $cartItem);
+            foreach ($storedContent as $cartItem) {
+                $content->put($cartItem->rowId, $cartItem);
+            }
+
+            static::dispatchEvent('cart.restored');
+
+            $this->putToSession($content);
+
+            $this->instance($currentInstance);
         }
 
-        static::dispatchEvent('cart.restored');
-
-        $this->putToSession($content);
-
-        $this->instance($currentInstance);
-
-        $this->getConnection()->table($this->getTableName())
-            ->where('identifier', $identifier)->delete();
+        $this
+            ->getConnection()
+            ->table($this->getTableName())
+            ->where('identifier', $identifier)
+            ->delete();
     }
 
     public function restoreQuietly($identifier)
@@ -516,6 +577,8 @@ class Cart
             return $total + ($cartItem->qty * ($cartItem->priceTax == 0 ? $cartItem->price : $cartItem->priceTax));
         }, 0);
 
+        $total = apply_filters('ecommerce_cart_total', $total, $content);
+
         return format_price($total);
     }
 
@@ -536,9 +599,21 @@ class Cart
 
         $content = $this->getContent();
 
-        return $content->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + ($cartItem->qty * $cartItem->tax);
-        }, 0);
+        $totalTax = 0;
+        foreach ($content as $cartItem) {
+            $taxRate = $cartItem->taxRate;
+            if ($taxRate > 0) {
+                $priceIncludesTax = $cartItem->options->get('price_includes_tax', false);
+
+                if ($priceIncludesTax) {
+                    $totalTax += EcommerceHelper::roundPrice($cartItem->qty * ($cartItem->price - ($cartItem->price / (1 + $taxRate / 100))));
+                } else {
+                    $totalTax += EcommerceHelper::roundPrice($cartItem->price * $cartItem->qty * ($taxRate / 100));
+                }
+            }
+        }
+
+        return $totalTax;
     }
 
     public function subtotal(): string
@@ -548,6 +623,8 @@ class Cart
         $subTotal = $content->reduce(function ($subTotal, CartItem $cartItem) {
             return $subTotal + ($cartItem->qty * $cartItem->price);
         }, 0);
+
+        $subTotal = apply_filters('ecommerce_cart_subtotal', $subTotal, $content);
 
         return format_price($subTotal);
     }
@@ -595,6 +672,29 @@ class Cart
                 } else {
                     $productInCart = clone $product;
                     $productInCart->cartItem = $cartItem;
+                    $productInCart->unique_id = $productInCart->id;
+
+                    if ($productOptions = Arr::get($cartItem->options->toArray(), 'options.optionCartValue', [])) {
+                        $optionValues = [];
+                        foreach ($productOptions as $optionId => $values) {
+                            if (is_array($values)) {
+                                foreach ($values as $value) {
+                                    if (isset($value['option_value'])) {
+                                        $optionValues[] = $optionId . ':' . $value['option_value'];
+                                    }
+                                }
+                            } else {
+                                if (isset($values['option_value'])) {
+                                    $optionValues[] = $optionId . ':' . $values['option_value'];
+                                }
+                            }
+                        }
+
+                        if (! empty($optionValues)) {
+                            $productInCart->unique_id = $productInCart->id . '_' . implode('_', $optionValues);
+                        }
+                    }
+
                     $productsInCart->push($productInCart);
                     $weight += $product->weight * $cartItem->qty;
                 }
@@ -603,7 +703,7 @@ class Cart
 
         $weight = EcommerceHelper::validateOrderWeight($weight);
 
-        $this->products = $productsInCart->unique('id');
+        $this->products = $productsInCart->unique('unique_id');
         $this->weight = $weight;
 
         if ($this->products->isEmpty()) {
@@ -699,6 +799,12 @@ class Cart
                     $options
                 );
             }
+        }
+
+        try {
+            app(HandleApplyProductCrossSaleService::class)->handle();
+        } catch (Exception $exception) {
+            BaseHelper::logError($exception);
         }
     }
 

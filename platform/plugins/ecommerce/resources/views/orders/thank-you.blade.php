@@ -2,6 +2,10 @@
 
 @section('title', __('Order successfully. Order number :id', ['id' => $order->code]))
 
+@push('header')
+    @include('plugins/ecommerce::orders.partials.google-ads-conversion', ['orders' => [$order]])
+@endpush
+
 @section('content')
     <div class="row">
         <div class="col-lg-7 col-md-6 col-12">
@@ -20,7 +24,7 @@
 
             @include('plugins/ecommerce::orders.thank-you.customer-info', compact('order'))
 
-            <a class="btn payment-checkout-btn" href="{{ BaseHelper::getHomepageUrl() }}">
+            <a class="btn payment-checkout-btn d-none d-md-inline-block mb-5" href="{{ BaseHelper::getHomepageUrl() }}">
                 {{ __('Continue shopping') }}
             </a>
         </div>
@@ -31,5 +35,11 @@
                 @include('plugins/ecommerce::orders.thank-you.total-info', ['order' => $order])
             </div>
         </div>
+    </div>
+
+    <div class="d-md-none mt-4 mb-4">
+        <a class="btn payment-checkout-btn w-100 mb-5" href="{{ BaseHelper::getHomepageUrl() }}">
+            {{ __('Continue shopping') }}
+        </a>
     </div>
 @stop

@@ -51,7 +51,7 @@
 .ps-list--pricing {
     li {
         position: relative;
-        padding: 1.5rem 2rem;
+        padding: 0.9375rem 1.25rem; // Was 1.5rem 2rem (15px 20px), now 15px/16px 20px/16px
         @include clearfix();
         background-color: #ffffff;
         vertical-align: top;
@@ -205,14 +205,14 @@
 .ps-list--dot {
     margin: 0;
     padding: 0;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem; // Was 2rem (20px), now 20px/16px
     list-style-type: none;
 
     li {
-        margin-bottom: 1rem;
+        margin-bottom: 0.625rem; // Was 1rem (10px), now 10px/16px
         position: relative;
         padding-left: 20px;
-        font-size: 1.4rem;
+        font-size: 0.875rem; // Was 1.4rem (14px), now 14px/16px
         color: #000000;
         line-height: 20px;
 

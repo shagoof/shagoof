@@ -32,6 +32,7 @@ use Botble\Ecommerce\Models\Order;
 use Botble\Ecommerce\Models\Product;
 use Botble\Ecommerce\Models\Shipment;
 use Botble\Ecommerce\Tables\CustomerTable;
+use Botble\Ecommerce\Tables\OrderIncompleteTable;
 use Botble\Ecommerce\Tables\ProductTable;
 use Botble\Language\Facades\Language;
 use Botble\LanguageAdvanced\Supports\LanguageAdvancedManager;
@@ -328,17 +329,17 @@ class HookServiceProvider extends ServiceProvider
                             ->placeholder(__('Store URL'))
                             ->attributes([
                                 'data-url' => route('public.ajax.check-store-url'),
+                                'style' => 'direction: ltr; text-align: left;',
                             ])
+                            ->wrapperAttributes(['class' => 'shop-url-wrapper mb-3 position-relative'])
                             ->prepend(
                                 sprintf(
                                     '<span class="position-absolute top-0 end-0 shop-url-status"></span><div class="input-group"><span class="input-group-text">%s</span>',
-                                    route(
-                                        'public.store',
-                                        ''
-                                    )
+                                    route('public.store', ['slug' => '/'])
                                 )
                             )
                             ->append('</div>')
+                            ->helperText(__('plugins/marketplace::store.forms.shop_url_helper'))
                             ->required(),
                     )
                     ->addAfter(
@@ -431,6 +432,29 @@ class HookServiceProvider extends ServiceProvider
             }
 
             return $validation;
+        }, 999, 2);
+
+        add_filter('ecommerce_order_placed_webhook_data', function (array $data, Order $order): array {
+            $store = $order->store;
+
+            if ($store && $store->id) {
+                $data['store'] = [
+                    'id' => $store->id,
+                    'name' => $store->name,
+                    'url' => $store->url,
+                    'phone' => $store->phone,
+                    'email' => $store->email,
+                    'address' => $store->address,
+                    'full_address' => $store->full_address,
+                    'city' => $store->city_name,
+                    'state' => $store->state_name,
+                    'country' => $store->country_name,
+                    'zip_code' => $store->zip_code,
+                    'logo' => $store->logo ? RvMedia::getImageUrl($store->logo) : null,
+                ];
+            }
+
+            return $data;
         }, 999, 2);
     }
 
@@ -558,6 +582,32 @@ class HookServiceProvider extends ServiceProvider
                             ],
                         ],
                     ],
+                    [
+                        'id' => 'marketplace_stores_seo_title',
+                        'type' => 'text',
+                        'label' => __('Stores listing page SEO title'),
+                        'attributes' => [
+                            'name' => 'marketplace_stores_seo_title',
+                            'value' => __('Stores'),
+                            'options' => [
+                                'class' => 'form-control',
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 'marketplace_stores_seo_description',
+                        'type' => 'textarea',
+                        'label' => __('Stores listing page SEO description'),
+                        'attributes' => [
+                            'name' => 'marketplace_stores_seo_description',
+                            'value' => null,
+                            'options' => [
+                                'class' => 'form-control',
+                                'rows' => 3,
+                            ],
+                        ],
+                        'helper' => __('Leave it empty to use the default description.'),
+                    ],
                 ],
             ]);
     }
@@ -638,7 +688,7 @@ class HookServiceProvider extends ServiceProvider
         } elseif (in_array($type, [CUSTOMER_MODULE_SCREEN_NAME, (new Customer())->getTable()])
             && in_array(
                 Route::currentRouteName(),
-                ['customers.create', 'customers.create.store', 'customers.edit', 'customers.edit.update']
+                ['customers.create', 'customers.store', 'customers.edit', 'customers.update']
             )
         ) {
             if ($request->has('is_vendor')) {
@@ -700,7 +750,7 @@ class HookServiceProvider extends ServiceProvider
                     return '&mdash;';
                 }
 
-                return Html::link(route('marketplace.store.edit', $item->store->id), $item->store->name);
+                return Html::link(route('marketplace.store.edit', $item->store?->id), $item->store->name);
             });
         }
 
@@ -712,7 +762,7 @@ class HookServiceProvider extends ServiceProvider
 
                 return Html::tag('span', trans('core/base::base.yes'), ['class' => 'text-success']);
             }),
-            Order::class, Discount::class => $data
+            Discount::class => $data
                 ->addColumn('store_id', function ($item) {
                     $store = $item->original_product && $item->original_product->store->name ? $item->original_product->store : $item->store;
 
@@ -722,34 +772,54 @@ class HookServiceProvider extends ServiceProvider
 
                     return Html::link($store->url, $store->name, ['target' => '_blank']);
                 })
-                ->filter(function ($query) use ($model) {
-                    $keyword = request()->input('search.value');
-                    if ($keyword) {
+                ->filter(function ($query) use ($table, $model) {
+                    if ($keyword = request()->input('search.value')) {
                         $keyword = '%' . $keyword . '%';
 
-                        $query = $query
+                        return $query
                             ->whereHas('store', function ($subQuery) use ($keyword) {
                                 return $subQuery->where('name', 'LIKE', $keyword);
-                            });
+                            })
+                            ->orWhere('code', 'LIKE', $keyword);
+                    }
 
-                        if ($model instanceof Order) {
-                            $query = $query
-                                ->orWhereHas('address', function ($subQuery) use ($keyword) {
-                                    return $subQuery
-                                        ->where('name', 'LIKE', $keyword)
-                                        ->orWhere('email', 'LIKE', $keyword)
-                                        ->orWhere('phone', 'LIKE', $keyword);
-                                })
-                                ->orWhereHas('user', function ($subQuery) use ($keyword) {
-                                    return $subQuery
-                                        ->where('name', 'LIKE', $keyword)
-                                        ->orWhere('email', 'LIKE', $keyword)
-                                        ->orWhere('phone', 'LIKE', $keyword);
-                                })
-                                ->orWhere('code', 'LIKE', $keyword);
-                        }
+                    return $query;
+                }),
+            Order::class => $data
+                ->addColumn('store_id', function ($item) {
+                    $store = $item->original_product && $item->original_product->store->name ? $item->original_product->store : $item->store;
 
-                        return $query;
+                    if (! $store->name) {
+                        return '&mdash;';
+                    }
+
+                    return Html::link($store->url, $store->name, ['target' => '_blank']);
+                })
+                ->filter(function ($query) use ($table, $model) {
+                    if ($keyword = request()->input('search.value')) {
+                        $keyword = '%' . $keyword . '%';
+
+                        return $query
+                            ->where(function ($query) use ($keyword): void {
+                                $query
+                                    ->whereHas('store', function ($subQuery) use ($keyword) {
+                                        return $subQuery->where('name', 'LIKE', $keyword);
+                                    })
+                                    ->orWhereHas('address', function ($subQuery) use ($keyword) {
+                                        return $subQuery
+                                            ->where('name', 'LIKE', $keyword)
+                                            ->orWhere('email', 'LIKE', $keyword)
+                                            ->orWhere('phone', 'LIKE', $keyword);
+                                    })
+                                    ->orWhereHas('user', function ($subQuery) use ($keyword) {
+                                        return $subQuery
+                                            ->where('name', 'LIKE', $keyword)
+                                            ->orWhere('email', 'LIKE', $keyword)
+                                            ->orWhere('phone', 'LIKE', $keyword);
+                                    })
+                                    ->orWhere('code', 'LIKE', $keyword);
+                            })
+                            ->where('is_finished', ! $table instanceof OrderIncompleteTable);
                     }
 
                     return $query;
@@ -949,10 +1019,10 @@ class HookServiceProvider extends ServiceProvider
 
         if (Auth::user()->hasPermission('products.index')) {
             $countPendingProducts = Product::query()
-                ->wherePublished()
+                ->where('status', BaseStatusEnum::PENDING)
                 ->where('created_by_type', Customer::class)
                 ->where('created_by_id', '!=', 0)
-                ->where('approved_by', 0)
+                ->where('is_variation', 0)
                 ->count();
 
             $data[] = [
@@ -1008,7 +1078,7 @@ class HookServiceProvider extends ServiceProvider
             return false;
         }
 
-        if (! $data->customer->store || ! $data->customer->store->id) {
+        if (! $data->customer->store || ! $data->customer->store?->id) {
             return false;
         }
 

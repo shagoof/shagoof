@@ -23,6 +23,7 @@ use Botble\Table\Columns\CreatedAtColumn;
 use Botble\Table\Columns\FormattedColumn;
 use Botble\Table\Columns\IdColumn;
 use Botble\Table\Columns\StatusColumn;
+use Botble\Theme\Facades\Theme;
 use Exception;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -78,26 +79,7 @@ class OrderTable extends TableAbstract
 
         $data = $data
             ->filter(function ($query) {
-                if ($keyword = $this->request->input('search.value')) {
-                    $keyword = '%' . $keyword . '%';
-
-                    return $query
-                        ->whereHas('address', function ($subQuery) use ($keyword) {
-                            return $subQuery
-                                ->where('name', 'LIKE', $keyword)
-                                ->orWhere('email', 'LIKE', $keyword)
-                                ->orWhere('phone', 'LIKE', $keyword);
-                        })
-                        ->orWhereHas('user', function ($subQuery) use ($keyword) {
-                            return $subQuery
-                                ->where('name', 'LIKE', $keyword)
-                                ->orWhere('email', 'LIKE', $keyword)
-                                ->orWhere('phone', 'LIKE', $keyword);
-                        })
-                        ->orWhere('code', 'LIKE', $keyword);
-                }
-
-                return $query;
+                return $this->filterOrders($query);
             });
 
         return $this->toJson($data);
@@ -147,7 +129,8 @@ class OrderTable extends TableAbstract
                         Html::mailto($item->user->email ?: $item->address->email, obfuscate: false),
                         $item->user->phone ?: $item->address->phone
                     );
-                }),
+                })
+                ->responsivePriority(99),
             Column::formatted('amount')
                 ->title(trans('plugins/ecommerce::order.amount')),
         ];
@@ -258,7 +241,7 @@ class OrderTable extends TableAbstract
             $filters['store_id'] = [
                 'title' => trans('plugins/marketplace::store.forms.store'),
                 'type' => 'select-search',
-                'choices' => [-1 => theme_option('site_title')] + DB::table('mp_stores')->pluck('name', 'id')->all(),
+                'choices' => [-1 => Theme::getSiteTitle()] + DB::table('mp_stores')->pluck('name', 'id')->all(),
             ];
         }
 
@@ -276,29 +259,35 @@ class OrderTable extends TableAbstract
 
     public function getDefaultButtons(): array
     {
-        return array_merge(['export'], parent::getDefaultButtons());
+        return array_unique(array_merge(['export'], parent::getDefaultButtons()));
     }
 
     public function saveBulkChangeItem(Model|Order $item, string $inputKey, ?string $inputValue): Model|bool
     {
-        if ($inputKey === 'status' && $inputValue == OrderStatusEnum::CANCELED) {
-            /**
-             * @var Order $item
-             */
-            if (! $item->canBeCanceledByAdmin()) {
-                throw new Exception(trans('plugins/ecommerce::order.order_cannot_be_canceled'));
+        if ($inputKey === 'status') {
+            if ($inputValue == OrderStatusEnum::CANCELED) {
+                /**
+                 * @var Order $item
+                 */
+                if (! $item->canBeCanceledByAdmin()) {
+                    throw new Exception(trans('plugins/ecommerce::order.order_cannot_be_canceled'));
+                }
+
+                OrderHelper::cancelOrder($item);
+
+                OrderHistory::query()->create([
+                    'action' => OrderHistoryActionEnum::CANCEL_ORDER,
+                    'description' => trans('plugins/ecommerce::order.order_was_canceled_by'),
+                    'order_id' => $item->getKey(),
+                    'user_id' => Auth::id(),
+                ]);
+
+                return $item;
+            } elseif ($inputValue == OrderStatusEnum::COMPLETED) {
+                OrderHelper::setOrderCompleted($item->getKey(), request(), Auth::id());
+
+                return $item;
             }
-
-            OrderHelper::cancelOrder($item);
-
-            OrderHistory::query()->create([
-                'action' => OrderHistoryActionEnum::CANCEL_ORDER,
-                'description' => trans('plugins/ecommerce::order.order_was_canceled_by'),
-                'order_id' => $item->getKey(),
-                'user_id' => Auth::id(),
-            ]);
-
-            return $item;
         }
 
         return parent::saveBulkChangeItem($item, $inputKey, $inputValue);
@@ -399,5 +388,33 @@ class OrderTable extends TableAbstract
                         $subQuery->where($column, $operator, $value);
                     });
             });
+    }
+
+    protected function filterOrders($query, bool $finished = true): Builder|QueryBuilder|Relation
+    {
+        if ($keyword = $this->request->input('search.value')) {
+            $keyword = '%' . $keyword . '%';
+
+            return $query
+                ->where(function ($query) use ($keyword): void {
+                    $query
+                        ->whereHas('address', function ($subQuery) use ($keyword) {
+                            return $subQuery
+                                ->where('name', 'LIKE', $keyword)
+                                ->orWhere('email', 'LIKE', $keyword)
+                                ->orWhere('phone', 'LIKE', $keyword);
+                        })
+                        ->orWhereHas('user', function ($subQuery) use ($keyword) {
+                            return $subQuery
+                                ->where('name', 'LIKE', $keyword)
+                                ->orWhere('email', 'LIKE', $keyword)
+                                ->orWhere('phone', 'LIKE', $keyword);
+                        })
+                        ->orWhere('code', 'LIKE', $keyword);
+                })
+                ->where('is_finished', $finished);
+        }
+
+        return $query;
     }
 }

@@ -24,6 +24,9 @@ return [
     'payment_detail' => 'Payment detail',
     'shipping_method' => 'Shipping method',
     'payment_method' => 'Payment method',
+    'shipping_company_name' => 'Shipping company name',
+    'tracking_id' => 'Tracking ID',
+    'tracking_link' => 'Tracking link',
     'select_state' => 'Select state...',
     'select_city' => 'Select city...',
     'theme_options' => [
@@ -55,6 +58,8 @@ return [
         ],
         'number_products_per_page' => 'Number of products per page',
         'number_of_cross_sale_product' => 'Number of cross sale products in product detail page',
+        'number_of_related_product' => 'Number of related products in product detail page',
+        'number_of_related_product_helper' => 'Number of related products to show in product detail page. Default is 4.',
         'max_price_filter' => 'Maximum price to filter',
         'logo_in_the_checkout_page' => 'Logo in the checkout page (Default is the main logo)',
         'login_background_image' => 'Login background image',
@@ -63,6 +68,8 @@ return [
         'merchant_return_policy_url' => 'Merchant return policy URL',
         'merchant_return_policy_url_placeholder' => 'https://example.com/merchant-return-policy',
         'merchant_return_days' => 'Merchant return days',
+        'merchant_return_applicable_country' => 'Merchant return applicable country',
+        'merchant_return_applicable_country_placeholder' => 'US, CA, GB (ISO country codes separated by commas)',
         'seo_name' => 'Ecommerce SEO',
         'seo_description' => 'Settings meta tags for ecommerce pages and other SEO info.',
         'page_seo_title' => ':page SEO title',
@@ -89,4 +96,5 @@ return [
     'download_link' => 'Download link',
     'update_time' => 'Time to update',
     'product_files' => 'Product files',
+    'saving' => 'Saving...',
 ];

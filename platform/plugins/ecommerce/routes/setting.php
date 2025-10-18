@@ -220,15 +220,10 @@ AdminHelper::registerRoutes(function (): void {
                     'permission' => 'ecommerce.settings.webhook',
                 ]);
 
-                Route::get('tracking', [
-                    'as' => 'ecommerce.settings.tracking',
-                    'uses' => 'TrackingSettingController@edit',
-                ]);
-
-                Route::put('tracking', [
-                    'as' => 'ecommerce.settings.tracking.update',
-                    'uses' => 'TrackingSettingController@update',
-                    'permission' => 'ecommerce.settings.tracking',
+                Route::post('webhook/test', [
+                    'as' => 'ecommerce.settings.webhook.test',
+                    'uses' => 'WebhookTestController@test',
+                    'permission' => 'ecommerce.settings.webhook',
                 ]);
 
                 Route::get('standard-and-format', [

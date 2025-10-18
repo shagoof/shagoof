@@ -3,12 +3,27 @@
 use Botble\Ads\Facades\AdsManager;
 use Botble\Ads\Repositories\Interfaces\AdsInterface;
 use Botble\Base\Enums\BaseStatusEnum;
+use Botble\Base\Forms\FieldOptions\CoreIconFieldOption;
+use Botble\Base\Forms\FieldOptions\DatePickerFieldOption;
+use Botble\Base\Forms\FieldOptions\MediaImageFieldOption;
+use Botble\Base\Forms\FieldOptions\NumberFieldOption;
+use Botble\Base\Forms\FieldOptions\SelectFieldOption;
+use Botble\Base\Forms\FieldOptions\TextareaFieldOption;
+use Botble\Base\Forms\FieldOptions\TextFieldOption;
+use Botble\Base\Forms\Fields\CoreIconField;
+use Botble\Base\Forms\Fields\DatetimeField;
+use Botble\Base\Forms\Fields\MediaImageField;
+use Botble\Base\Forms\Fields\NumberField;
+use Botble\Base\Forms\Fields\SelectField;
+use Botble\Base\Forms\Fields\TextareaField;
+use Botble\Base\Forms\Fields\TextField;
 use Botble\Ecommerce\Facades\EcommerceHelper;
 use Botble\Ecommerce\Models\FlashSale;
 use Botble\Ecommerce\Models\ProductCategory;
 use Botble\Ecommerce\Repositories\Interfaces\ProductInterface;
 use Botble\Faq\Models\FaqCategory;
 use Botble\Shortcode\Compilers\Shortcode;
+use Botble\Shortcode\Forms\ShortcodeForm;
 use Botble\Theme\Facades\Theme;
 use Botble\Theme\Supports\ThemeSupport;
 
@@ -32,8 +47,18 @@ app()->booted(function (): void {
         );
 
         shortcode()->setAdminConfig('featured-product-categories', function ($attributes) {
-            return Theme::partial('short-codes.featured-product-categories-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                );
         });
+
+        shortcode()->registerLoadingState('featured-product-categories', Theme::getThemeNamespace('partials.short-codes.featured-product-categories-skeleton'));
 
         add_shortcode('featured-products', __('Featured products'), __('Featured products'), function ($shortCode) {
             $products = get_featured_products([
@@ -48,8 +73,25 @@ app()->booted(function (): void {
         });
 
         shortcode()->setAdminConfig('featured-products', function ($attributes) {
-            return Theme::partial('short-codes.featured-products-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'limit',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Limit'))
+                        ->placeholder(__('Limit'))
+                );
         });
+
+        shortcode()->registerLoadingState('featured-products', Theme::getThemeNamespace('partials.short-codes.featured-products-skeleton'));
 
         add_shortcode('featured-brands', __('Featured Brands'), __('Featured Brands'), function ($shortCode) {
             $brands = get_featured_brands((int) $shortCode->limit ?: 8);
@@ -61,8 +103,26 @@ app()->booted(function (): void {
         });
 
         shortcode()->setAdminConfig('featured-brands', function ($attributes) {
-            return Theme::partial('short-codes.featured-brands-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'limit',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Number of brands to display'))
+                        ->placeholder(__('Number of brands to display'))
+                        ->defaultValue(8)
+                );
         });
+
+        shortcode()->registerLoadingState('featured-brands', Theme::getThemeNamespace('partials.short-codes.featured-brands-skeleton'));
 
         add_shortcode(
             'product-collections',
@@ -100,8 +160,26 @@ app()->booted(function (): void {
         );
 
         shortcode()->setAdminConfig('product-collections', function (array $attributes) {
-            return Theme::partial('short-codes.product-collections-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'limit',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Limit'))
+                        ->placeholder(__('Limit'))
+                        ->defaultValue(8)
+                );
         });
+
+        shortcode()->registerLoadingState('product-collections', Theme::getThemeNamespace('partials.short-codes.product-collections-skeleton'));
 
         add_shortcode(
             'product-category-products',
@@ -142,8 +220,40 @@ app()->booted(function (): void {
         );
 
         shortcode()->setAdminConfig('product-category-products', function (array $attributes) {
-            return Theme::partial('short-codes.product-category-products-admin-config', compact('attributes'));
+            $categories = ProductCategory::query()
+                ->wherePublished()
+                ->orderBy('order')->oldest()
+                ->get()
+                ->pluck('name', 'id')
+                ->all();
+
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'category_id',
+                    SelectField::class,
+                    SelectFieldOption::make()
+                        ->label(__('Select category'))
+                        ->choices($categories)
+                )
+                ->add(
+                    'number_of_categories',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Limit number of categories'))
+                        ->placeholder(__('Default: 3'))
+                        ->defaultValue(3)
+                )
+                ->add(
+                    'limit',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Limit number of products'))
+                        ->placeholder(__('Unlimited by default'))
+                );
         });
+
+        shortcode()->registerLoadingState('product-category-products', Theme::getThemeNamespace('partials.short-codes.product-category-products-skeleton'));
 
         add_shortcode('trending-products', __('Trending Products'), __('Trending Products'), function ($shortCode) {
             $products = get_trending_products([
@@ -157,8 +267,26 @@ app()->booted(function (): void {
         });
 
         shortcode()->setAdminConfig('trending-products', function ($attributes) {
-            return Theme::partial('short-codes.trending-products-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'limit',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Limit'))
+                        ->placeholder(__('Limit'))
+                        ->defaultValue(10)
+                );
         });
+
+        shortcode()->registerLoadingState('trending-products', Theme::getThemeNamespace('partials.short-codes.trending-products-skeleton'));
 
         add_shortcode('flash-sale', __('Flash sale'), __('Flash sale'), function ($shortCode) {
             if (! $shortCode->flash_sale_id) {
@@ -199,10 +327,29 @@ app()->booted(function (): void {
             $flashSales = FlashSale::query()
                 ->wherePublished()
                 ->notExpired()
-                ->get();
+                ->get()
+                ->pluck('name', 'id')
+                ->all();
 
-            return Theme::partial('short-codes.flash-sale-admin-config', compact('flashSales', 'attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'flash_sale_id',
+                    SelectField::class,
+                    SelectFieldOption::make()
+                        ->label(__('Select a flash sale'))
+                        ->choices($flashSales)
+                );
         });
+
+        shortcode()->registerLoadingState('flash-sale', Theme::getThemeNamespace('partials.short-codes.flash-sale-skeleton'));
     }
 
     if (is_plugin_active('simple-slider')) {
@@ -215,11 +362,25 @@ app()->booted(function (): void {
                 $ads = app(AdsInterface::class)->getModel()
                     ->where('status', BaseStatusEnum::PUBLISHED)
                     ->notExpired()
-                    ->get();
+                    ->get()
+                    ->pluck('name', 'key')
+                    ->all();
 
                 $maxAds = 2;
 
-                return $data . Theme::partial('short-codes.select-ads-admin-config', compact('ads', 'attributes', 'maxAds'));
+                $form = ShortcodeForm::createFromArray($attributes);
+
+                for ($i = 1; $i <= $maxAds; $i++) {
+                    $form->add(
+                        'ads_' . $i,
+                        SelectField::class,
+                        SelectFieldOption::make()
+                            ->label(__('Ad :number', ['number' => $i]))
+                            ->choices(['' => __('-- select --')] + $ads)
+                    );
+                }
+
+                return $data . $form->renderForm();
             }
 
             return $data;
@@ -248,7 +409,31 @@ app()->booted(function (): void {
         });
 
         shortcode()->setAdminConfig('newsletter-form', function ($attributes) {
-            return Theme::partial('short-codes.newsletter-form-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'subtitle',
+                    TextareaField::class,
+                    TextareaFieldOption::make()
+                        ->label(__('Subtitle'))
+                        ->placeholder(__('Subtitle'))
+                        ->rows(3)
+                )
+                ->add(
+                    'description',
+                    TextareaField::class,
+                    TextareaFieldOption::make()
+                        ->label(__('Description'))
+                        ->placeholder(__('Description'))
+                        ->rows(3)
+                );
         });
     }
 
@@ -264,7 +449,51 @@ app()->booted(function (): void {
     });
 
     shortcode()->setAdminConfig('download-app', function ($attributes) {
-        return Theme::partial('short-codes.download-app-admin-config', compact('attributes'));
+        return ShortcodeForm::createFromArray($attributes)
+            ->withLazyLoading()
+            ->add(
+                'title',
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('Title'))
+                    ->placeholder(__('Title'))
+            )
+            ->add(
+                'subtitle',
+                TextareaField::class,
+                TextareaFieldOption::make()
+                    ->label(__('Subtitle'))
+                    ->placeholder(__('Subtitle'))
+                    ->rows(3)
+            )
+            ->add(
+                'description',
+                TextareaField::class,
+                TextareaFieldOption::make()
+                    ->label(__('Description'))
+                    ->placeholder(__('Description'))
+                    ->rows(3)
+            )
+            ->add(
+                'screenshot',
+                MediaImageField::class,
+                MediaImageFieldOption::make()
+                    ->label(__('Screenshot'))
+            )
+            ->add(
+                'android_app_url',
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('Android app URL'))
+                    ->placeholder(__('Android app URL'))
+            )
+            ->add(
+                'ios_app_url',
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('iOS app URL'))
+                    ->placeholder(__('iOS app URL'))
+            );
     });
 
     if (is_plugin_active('faq')) {
@@ -286,7 +515,15 @@ app()->booted(function (): void {
         });
 
         shortcode()->setAdminConfig('faq', function ($attributes) {
-            return Theme::partial('short-codes.faq-admin-config', compact('attributes'));
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                );
         });
     }
 
@@ -295,10 +532,36 @@ app()->booted(function (): void {
     });
 
     shortcode()->setAdminConfig('site-features', function ($attributes) {
-        return Theme::partial('short-codes.site-features-admin-config', compact('attributes'));
+        $form = ShortcodeForm::createFromArray($attributes)
+            ->withLazyLoading();
+
+        for ($i = 1; $i < 6; $i++) {
+            $form->add(
+                'icon' . $i,
+                CoreIconField::class,
+                CoreIconFieldOption::make()
+                    ->label(__('Icon :number', ['number' => $i]))
+            )
+            ->add(
+                'title' . $i,
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('Title :number', ['number' => $i]))
+                    ->placeholder(__('Title :number', ['number' => $i]))
+            )
+            ->add(
+                'subtitle' . $i,
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('Subtitle :number', ['number' => $i]))
+                    ->placeholder(__('Subtitle :number', ['number' => $i]))
+            );
+        }
+
+        return $form;
     });
 
-    if (is_plugin_active('contact')) {
+    if (is_plugin_active('contact') && defined('CONTACT_FORM_TEMPLATE_VIEW')) {
         add_filter(CONTACT_FORM_TEMPLATE_VIEW, function () {
             return Theme::getThemeNamespace() . '::partials.short-codes.contact-form';
         }, 120);
@@ -309,7 +572,15 @@ app()->booted(function (): void {
     });
 
     shortcode()->setAdminConfig('contact-info-boxes', function ($attributes) {
-        return Theme::partial('short-codes.contact-info-boxes-admin-config', compact('attributes'));
+        return ShortcodeForm::createFromArray($attributes)
+            ->withLazyLoading()
+            ->add(
+                'title',
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('Title'))
+                    ->placeholder(__('Title'))
+            );
     });
 
     if (is_plugin_active('ads')) {
@@ -335,9 +606,25 @@ app()->booted(function (): void {
             $ads = app(AdsInterface::class)->getModel()
                 ->where('status', BaseStatusEnum::PUBLISHED)
                 ->notExpired()
-                ->get();
+                ->get()
+                ->pluck('name', 'key')
+                ->all();
 
-            return Theme::partial('short-codes.theme-ads-admin-config', compact('ads', 'attributes'));
+            $form = ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading();
+
+            for ($i = 1; $i < 5; $i++) {
+                $form->add(
+                    'key_' . $i,
+                    SelectField::class,
+                    SelectFieldOption::make()
+                        ->label(__('Ad :number', ['number' => $i]))
+                        ->choices(['' => __('-- Select --')] + $ads)
+                        ->searchable()
+                );
+            }
+
+            return $form;
         });
     }
 
@@ -349,6 +636,20 @@ app()->booted(function (): void {
     });
 
     shortcode()->setAdminConfig('coming-soon', function ($attributes) {
-        return Theme::partial('short-codes.coming-soon-admin-config', compact('attributes'));
+        return ShortcodeForm::createFromArray($attributes)
+            ->withLazyLoading()
+            ->add(
+                'time',
+                DatetimeField::class,
+                DatePickerFieldOption::make()
+                    ->label(__('Time'))
+                    ->placeholder(__('Time'))
+            )
+            ->add(
+                'image',
+                MediaImageField::class,
+                MediaImageFieldOption::make()
+                    ->label(__('Image'))
+            );
     });
 });

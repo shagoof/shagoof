@@ -18,9 +18,9 @@
                     <div class="ps-product__shopping">
                         @if (! EcommerceHelper::hideProductPrice() || EcommerceHelper::isCartEnabled())
                             <span class="ps-product__price">
-                                <span>{{ format_price($product->front_sale_price_with_taxes) }}</span>
+                                <span data-bb-value="product-price">{{ format_price($product->front_sale_price_with_taxes) }}</span>
                                 @if ($product->front_sale_price !== $product->price)
-                                    <del>{{ format_price($product->price_with_taxes) }}</del>
+                                    <del data-bb-value="product-original-price">{{ format_price($product->price_with_taxes) }}</del>
                                 @endif
                             </span>
                         @endif

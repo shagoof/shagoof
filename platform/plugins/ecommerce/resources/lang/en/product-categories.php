@@ -22,4 +22,9 @@ return [
     'import' => [
         'description' => 'Import product categories from Excel/CSV file.',
     ],
+    'table_view_info' => 'For easier bulk management of categories, you can also',
+    'manage_as_table' => 'manage categories as a table',
+    'parent' => 'Parent Category',
+    'image' => 'Image',
+    'product_category_translations' => 'Product Category Translations',
 ];

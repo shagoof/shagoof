@@ -29,6 +29,12 @@ Route::group(['namespace' => 'Botble\Blog\Http\Controllers'], function (): void 
                     'uses' => 'CategoryController@updateTree',
                     'permission' => 'categories.index',
                 ]);
+
+                Route::get('search', [
+                    'as' => 'search',
+                    'uses' => 'CategoryController@getSearch',
+                    'permission' => 'categories.index',
+                ]);
             });
 
             Route::group(['prefix' => 'tags', 'as' => 'tags.'], function (): void {

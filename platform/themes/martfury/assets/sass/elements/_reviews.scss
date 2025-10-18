@@ -33,23 +33,23 @@
     }
 
     .ms-2 {
-        margin-left: 0.5rem !important;
+        margin-left: 0.3125rem !important; // Was 0.5rem (5px), now 5px/16px
     }
 
     .gap-2 {
-        gap: 0.5rem !important;
+        gap: 0.3125rem !important; // Was 0.5rem (5px), now 5px/16px
     }
 
     &.gap-5, .gap-5 {
-        gap: 3rem !important;
+        gap: 1.875rem !important; // Was 3rem (30px), now 30px/16px
     }
 
     .g-1, .gy-1 {
-        --bs-gutter-y: 0.25rem;
+        --bs-gutter-y: 0.15625rem; // Was 0.25rem (2.5px), now 2.5px/16px
     }
 
     .g-1, .gx-1 {
-        --bs-gutter-x: 0.25rem;
+        --bs-gutter-x: 0.15625rem; // Was 0.25rem (2.5px), now 2.5px/16px
     }
 
     .badge {
@@ -62,7 +62,7 @@
         text-align: center;
         white-space: nowrap;
         vertical-align: baseline;
-        border-radius: 0.25rem;
+        border-radius: 0.15625rem; // Was 0.25rem (2.5px), now 2.5px/16px
     }
 
     .bg-dark {
@@ -100,8 +100,8 @@
     }
 
     .review-item__images .row, .review-images.row {
-        --bs-gutter-x: 0.25rem;
-        --bs-gutter-y: 0.25rem;
+        --bs-gutter-x: 0.15625rem; // Was 0.25rem (2.5px), now 2.5px/16px
+        --bs-gutter-y: 0.15625rem; // Was 0.25rem (2.5px), now 2.5px/16px
         display: flex;
         flex-wrap: wrap;
         margin-top: calc(-1 * var(--bs-gutter-y));

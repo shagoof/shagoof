@@ -3,13 +3,14 @@
 use Botble\Base\Facades\AdminHelper;
 use Botble\Base\Http\Middleware\RequiresJsonRequestMiddleware;
 use Botble\Ecommerce\Facades\EcommerceHelper;
-use Botble\Ecommerce\Http\Controllers\ExportOrderController;
 use Botble\Ecommerce\Http\Controllers\ExportProductCategoryController;
 use Botble\Ecommerce\Http\Controllers\Fronts\PublicUpdateCheckoutController;
 use Botble\Ecommerce\Http\Controllers\Fronts\PublicUpdateTaxCheckoutController;
 use Botble\Ecommerce\Http\Controllers\Fronts\QuickShopController;
 use Botble\Ecommerce\Http\Controllers\Fronts\QuickViewController;
+use Botble\Ecommerce\Http\Controllers\Fronts\GuestPaymentProofController;
 use Botble\Ecommerce\Http\Controllers\ImportProductCategoryController;
+use Botble\Ecommerce\Http\Controllers\OrderExportController;
 use Botble\Theme\Events\ThemeRoutingBeforeEvent;
 use Botble\Theme\Facades\Theme;
 use Illuminate\Support\Facades\Route;
@@ -141,35 +142,55 @@ AdminHelper::registerRoutes(function (): void {
                 ->parameters(['' => 'product_attribute_set']);
         });
 
-        Route::group(['prefix' => 'reports'], function (): void {
+        Route::group(['prefix' => 'reports', 'as' => 'ecommerce.report.'], function (): void {
             Route::get('', [
-                'as' => 'ecommerce.report.index',
+                'as' => 'index',
                 'uses' => 'ReportController@getIndex',
             ]);
 
             Route::post('top-selling-products', [
-                'as' => 'ecommerce.report.top-selling-products',
+                'as' => 'top-selling-products',
                 'uses' => 'ReportController@getTopSellingProducts',
                 'permission' => 'ecommerce.report.index',
             ]);
 
             Route::post('recent-orders', [
-                'as' => 'ecommerce.report.recent-orders',
+                'as' => 'recent-orders',
                 'uses' => 'ReportController@getRecentOrders',
                 'permission' => 'ecommerce.report.index',
             ]);
 
             Route::post('trending-products', [
-                'as' => 'ecommerce.report.trending-products',
+                'as' => 'trending-products',
                 'uses' => 'ReportController@getTrendingProducts',
                 'permission' => 'ecommerce.report.index',
             ]);
 
             Route::get('dashboard-general-report', [
-                'as' => 'ecommerce.report.dashboard-widget.general',
+                'as' => 'dashboard-widget.general',
                 'uses' => 'ReportController@getDashboardWidgetGeneral',
                 'permission' => 'ecommerce.report.index',
             ]);
+
+            Route::group(['prefix' => 'widget-config', 'as' => 'widget-config.'], function (): void {
+                Route::get('', [
+                    'as' => 'index',
+                    'uses' => 'ReportWidgetConfigController@index',
+                    'permission' => 'ecommerce.report.index',
+                ]);
+
+                Route::post('save', [
+                    'as' => 'save',
+                    'uses' => 'ReportWidgetConfigController@store',
+                    'permission' => 'ecommerce.report.index',
+                ]);
+
+                Route::get('get', [
+                    'as' => 'get',
+                    'uses' => 'ReportWidgetConfigController@getConfiguration',
+                    'permission' => 'ecommerce.report.index',
+                ]);
+            });
         });
 
         Route::group(['prefix' => 'flash-sales', 'as' => 'flash-sale.'], function (): void {
@@ -189,8 +210,8 @@ AdminHelper::registerRoutes(function (): void {
             });
 
             Route::group(['prefix' => 'orders', 'as' => 'orders.', 'permission' => 'orders.export'], function (): void {
-                Route::get('/', [ExportOrderController::class, 'index'])->name('index');
-                Route::post('/', [ExportOrderController::class, 'store'])->name('store');
+                Route::get('/', [OrderExportController::class, 'index'])->name('index');
+                Route::post('/', [OrderExportController::class, 'store'])->name('store');
             });
         });
 
@@ -245,6 +266,13 @@ Theme::registerRoutes(function (): void {
             Route::post('ajax/checkout/update-tax', [PublicUpdateTaxCheckoutController::class, '__invoke'])
                 ->middleware(RequiresJsonRequestMiddleware::class)
                 ->name('public.ajax.checkout.update-tax');
+
+            Route::group(['prefix' => 'orders/payment-proof'], function (): void {
+                Route::post('{token}/upload', [GuestPaymentProofController::class, 'upload'])
+                    ->name('public.orders.upload-proof-guest');
+                Route::get('{token}/download', [GuestPaymentProofController::class, 'download'])
+                    ->name('public.orders.download-proof-guest');
+            });
         });
     });
 });

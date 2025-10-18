@@ -42,7 +42,7 @@ class LanguageController extends SettingController
         $flags = Language::getListLanguageFlags();
         $languageCodes = Language::getLanguageCodes();
         $localeKeys = Language::getLocaleKeys();
-        $activeLanguages = LanguageModel::query()->orderBy('lang_order')->get();
+        $activeLanguages = LanguageModel::query()->oldest('lang_order')->get();
 
         $languageSettingForm = LanguageSettingForm::create();
 
@@ -88,6 +88,8 @@ class LanguageController extends SettingController
             $language = LanguageModel::query()->create($request->except('lang_id'));
 
             $this->clearRoutesCache();
+
+            LanguageFacade::clearCache();
 
             event(new CreatedContentEvent(LANGUAGE_MODULE_SCREEN_NAME, $request, $language));
 
@@ -191,6 +193,8 @@ class LanguageController extends SettingController
 
             $this->clearRoutesCache();
 
+            LanguageFacade::clearCache();
+
             event(new UpdatedContentEvent(LANGUAGE_MODULE_SCREEN_NAME, $request, $language));
 
             return $this
@@ -277,6 +281,8 @@ class LanguageController extends SettingController
                 }
 
                 $this->clearRoutesCache();
+
+                LanguageFacade::clearCache();
 
                 $this->httpResponse()->setData($defaultLanguageId);
             });
@@ -398,6 +404,8 @@ class LanguageController extends SettingController
         $newLanguage->save();
 
         $this->clearRoutesCache();
+
+        LanguageFacade::clearCache();
 
         event(new UpdatedContentEvent(LANGUAGE_MODULE_SCREEN_NAME, $request, $newLanguage));
 

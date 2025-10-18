@@ -180,7 +180,7 @@
                                                     {!! $invoiceItem->product_options_implode !!}
                                                 </p>
 
-                                                @if (is_plugin_active('marketplace') && ($product = $invoiceItem->reference) && $product->original_product->store->id)
+                                                @if (is_plugin_active('marketplace') && ($product = $invoiceItem->reference) && $product->original_product->store?->id)
                                                     <p class="mb-0 small">
                                                         {{ __('Sold by') }}
                                                         <a href="{{ $product->original_product->store->url }}" class="text-primary">
@@ -223,6 +223,7 @@
                                         {{ format_price($invoice->sub_total) }}
                                     </x-core::table.body.cell>
                                 </x-core::table.body.row>
+                                {!! apply_filters('ecommerce_admin_invoice_after_subtotal', null, $invoice) !!}
                                 @if ($invoice->tax_amount > 0)
                                     <x-core::table.body.row>
                                         <x-core::table.body.cell colspan="4"></x-core::table.body.cell>

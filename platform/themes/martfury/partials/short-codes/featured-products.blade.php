@@ -3,7 +3,7 @@
         <div class="ps-section__header">
             <h3>{!! BaseHelper::clean($title) !!}</h3>
             <ul class="ps-section__links">
-                <li><a href="{{ route('public.products') }}">{{ __('View All') }}</a></li>
+                <li><a href="{{ route('public.products') }}" title="{{ __('View all products') }}">{{ __('View All') }}</a></li>
             </ul>
         </div>
         <div class="ps-section__content">

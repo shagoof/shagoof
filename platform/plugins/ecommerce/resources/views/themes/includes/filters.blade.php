@@ -1,6 +1,6 @@
 @if (EcommerceHelper::hasAnyProductFilters())
     @php
-        $dataForFilter = EcommerceHelper::dataForFilter($category ?? null, $request ?? null);
+        $dataForFilter = EcommerceHelper::dataForFilter($category ?? null);
         [$categories, $brands, $tags, $rand, $categoriesRequest, $urlCurrent, $categoryId, $maxFilterPrice] = $dataForFilter;
     @endphp
 
@@ -25,6 +25,8 @@
             @if (EcommerceHelper::isEnabledFilterProductsByPrice() && (! EcommerceHelper::hideProductPrice() || EcommerceHelper::isCartEnabled()))
                 @include(EcommerceHelper::viewPath('includes.filters.price'))
             @endif
+
+            @include(EcommerceHelper::viewPath('includes.filters.discounted-only'))
 
             @if (EcommerceHelper::isEnabledFilterProductsByAttributes())
                 @include(EcommerceHelper::viewPath('includes.filters.attributes', ['view' => $view ?? null]))

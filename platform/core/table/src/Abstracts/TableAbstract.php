@@ -11,6 +11,7 @@ use Botble\Base\Facades\Html;
 use Botble\Base\Models\BaseModel;
 use Botble\Base\Supports\Builders\Extensible;
 use Botble\Base\Supports\Builders\RenderingExtensible;
+use Botble\Support\Repositories\Eloquent\RepositoriesAbstract;
 use Botble\Table\Abstracts\Concerns\DeprecatedFunctions;
 use Botble\Table\Abstracts\Concerns\HasActions;
 use Botble\Table\Abstracts\Concerns\HasBulkActions;
@@ -73,14 +74,14 @@ abstract class TableAbstract extends DataTable implements ExtensibleContract
 
     protected int $pageLength = 10;
 
-    protected $view = 'core/table::table';
+    protected ?string $view = 'core/table::table';
 
     protected array $options = [];
 
     /**
      * @deprecated since v6.8.0
      */
-    protected $repository;
+    protected ?RepositoriesAbstract $repository = null;
 
     protected ?BaseModelContract $model = null;
 
@@ -133,6 +134,8 @@ abstract class TableAbstract extends DataTable implements ExtensibleContract
         if (! $this->getOption('class')) {
             $this->setOption('class', 'table card-table table-vcenter table-striped table-hover');
         }
+
+        $this->hasResponsive = setting('datatables_default_enable_responsive', true);
 
         $this->setup();
 
@@ -378,7 +381,7 @@ abstract class TableAbstract extends DataTable implements ExtensibleContract
     }
 
     /**
-     * @param  BaseModel|class-string<BaseModel>  $model
+     * @param BaseModel|class-string<BaseModel> $model
      */
     public function model(BaseModelContract|string $model): static
     {
@@ -427,9 +430,9 @@ abstract class TableAbstract extends DataTable implements ExtensibleContract
     /**
      * @param  \Botble\Table\Columns\Column[]  $columns
      */
-    public function addColumns(array $columns): static
+    public function addColumns(Closure|callable|array $columns): static
     {
-        foreach ($columns as $column) {
+        foreach (value($columns) as $column) {
             $this->addColumn($column);
         }
 

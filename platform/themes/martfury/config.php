@@ -38,10 +38,10 @@ return [
         // this event should call to assign some assets,
         // breadcrumb template.
         'beforeRenderTheme' => function (Theme $theme): void {
-            $version = get_cms_version() . '.9';
+            $version = get_cms_version();
 
             $theme->asset()->usePath()->add('linearicons', 'fonts/Linearicons/Linearicons/Font/demo-files/demo.css');
-            $theme->asset()->usePath()->add('bootstrap-css', 'plugins/bootstrap/css/bootstrap.min.css');
+            $theme->asset()->usePath()->add('bootstrap-css', 'plugins/bootstrap/css/bootstrap.min.css', [], [], '5.3.7');
             $theme->asset()->usePath()->add('owl-carousel-css', 'plugins/owl-carousel/assets/owl.carousel.min.css');
             $theme->asset()->usePath()
                 ->add('owl-carousel-theme-css', 'plugins/owl-carousel/assets/owl.theme.default.min.css');
@@ -61,11 +61,10 @@ return [
             $theme->asset()->container('footer')->usePath()->add('jquery', 'plugins/jquery-3.5.1.min.js');
             $theme->asset()->container('footer')->usePath()
                 ->add('nouislider-js', 'plugins/nouislider/nouislider.min.js', ['jquery']);
-            $theme->asset()->container('footer')->usePath()->add('popper-js', 'plugins/popper.min.js', ['jquery']);
             $theme->asset()->container('footer')->usePath()
                 ->add('owl-carousel-js', 'plugins/owl-carousel/owl.carousel.min.js', ['jquery'], version: $version);
             $theme->asset()->container('footer')->usePath()
-                ->add('bootstrap-js', 'plugins/bootstrap/js/bootstrap.min.js', ['jquery']);
+                ->add('bootstrap-js', 'plugins/bootstrap/js/bootstrap.bundle.min.js', ['jquery'], version: '5.3.7');
             $theme->asset()->container('footer')->usePath()
                 ->add('matchHeight-js', 'plugins/jquery.matchHeight-min.js', ['jquery']);
             $theme->asset()->container('footer')->usePath()
@@ -99,6 +98,8 @@ return [
                     'ecommerce.brand',
                     'ecommerce.search',
                     'ecommerce.cart',
+                    'marketplace.stores',
+                    'marketplace.store',
                 ], function (View $view): void {
                     $view->withShortcodes();
                 });

@@ -18,7 +18,7 @@
                         @endif
                     </div>
                     <div class="ps-block__user-content">
-                        <h3 class="text-white">{{ $store->name }}</h3>
+                        <h3 class="text-white">{{ $store->name }} {!! $store->badge !!}</h3>
                         @if (! MarketplaceHelper::hideStoreAddress() && $store->full_address)
                             <p><i class="icon-map-marker" @if ($coverImage) style="color: #fff" @endif></i>&nbsp;{{ $store->full_address }}</p>
                         @endif
@@ -75,7 +75,7 @@
                                     $contactForm
                                     ->setFormOption('class', 'ps-form--contact-us contact-form bb-contact-store-form')
                                     ->setFormInputClass('form-control')
-                                    ->setFormLabelClass('d-none sr-only')
+                                    ->setFormLabelClass('d-none visually-hidden')
                                     ->modify(
                                         'submit',
                                         'submit',
@@ -83,7 +83,7 @@
                                             ->addAttribute('data-bb-loading', 'button-loading')
                                             ->cssClass('ps-btn')
                                             ->label(__('Send message'))
-                                            ->wrapperAttributes(['class' => 'form-group submit'])
+                                            ->wrapperAttributes(['class' => 'mb-3 submit'])
                                             ->toArray(),
                                         true
                                     )
@@ -103,7 +103,7 @@
                                         action="{{ URL::current() }}"
                                         method="GET"
                                     >
-                                        <div class="form-group mb-5">
+                                        <div class="mb-5">
                                             <button><i class="icon-magnifier"></i></button>
                                             <input class="form-control" name="q" value="{{ BaseHelper::stringify(request()->query('q')) }}" type="text" placeholder="{{ __('Search in this store...') }}">
                                         </div>

@@ -5,16 +5,19 @@ namespace Botble\Base\Helpers;
 use Botble\Base\Facades\AdminAppearance;
 use Botble\Base\Facades\Html;
 use Botble\Base\Supports\GoogleFonts;
+use Botble\Base\Supports\HTMLPurifier\URIScheme\ViberURIScheme;
 use Botble\Base\View\Components\BadgeComponent;
 use Botble\Icon\Facades\Icon as IconFacade;
 use Botble\Icon\View\Components\Icon;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use HTMLPurifier_URISchemeRegistry;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Throwable;
@@ -75,22 +78,14 @@ class BaseHelper
         return number_format($bytes, $precision, ',', '.') . ' ' . $units[$pow];
     }
 
-    public function getFileData(string $file, bool $convertToArray = true)
+    public function getFileData(string $file, bool $convertToArray = true): mixed
     {
         $file = File::get($file);
-        if (! empty($file)) {
-            if ($convertToArray) {
-                return json_decode($file, true);
-            }
-
-            return $file;
+        if (empty($file)) {
+            return $convertToArray ? [] : null;
         }
 
-        if (! $convertToArray) {
-            return null;
-        }
-
-        return [];
+        return $convertToArray ? json_decode($file, true) : $file;
     }
 
     public function saveFileData(string $path, array|string|null $data, bool $json = true): bool
@@ -119,18 +114,22 @@ class BaseHelper
 
     public function scanFolder(string $path, array $ignoreFiles = []): array
     {
-        if (! $path) {
+        if (empty($path) || ! File::isDirectory($path)) {
             return [];
         }
 
-        if (File::isDirectory($path)) {
-            $data = array_diff(scandir($path), array_merge(['.', '..', '.DS_Store'], $ignoreFiles));
-            natsort($data);
+        $ignoreFiles = array_merge(['.', '..', '.DS_Store'], $ignoreFiles);
+        $files = [];
 
-            return $data;
+        foreach (new \DirectoryIterator($path) as $file) {
+            if (! $file->isDot() && ! in_array($file->getFilename(), $ignoreFiles)) {
+                $files[] = $file->getFilename();
+            }
         }
 
-        return [];
+        natsort($files);
+
+        return $files;
     }
 
     public function getAdminPrefix(): string
@@ -331,6 +330,9 @@ class BaseHelper
             $dirty = (string) $dirty;
         }
 
+        // Register Viber URI scheme if not already registered
+        $this->ensureViberURISchemeRegistered();
+
         return clean($dirty, $config);
     }
 
@@ -525,8 +527,12 @@ class BaseHelper
         return IconFacade::has($name);
     }
 
-    public function renderIcon(string $name, ?string $size = null, array $attributes = [], bool $safe = false): string
+    public function renderIcon(?string $name, ?string $size = null, array $attributes = [], bool $safe = false): string
     {
+        if (! $name) {
+            return '';
+        }
+
         if ($safe && ! $this->hasIcon($name)) {
             return '';
         }
@@ -579,5 +585,34 @@ class BaseHelper
             ...(! empty($customGoogleFonts) ? $customGoogleFonts : []),
             ...(! empty($customFonts) ? $customFonts : []),
         ];
+    }
+
+    protected function ensureViberURISchemeRegistered(): void
+    {
+        static $registered = false;
+
+        if ($registered || ! class_exists(HTMLPurifier_URISchemeRegistry::class)) {
+            return;
+        }
+
+        try {
+            $registry = HTMLPurifier_URISchemeRegistry::instance();
+            $registry->register('viber', new ViberURIScheme());
+
+            $registered = true;
+        } catch (Throwable $e) {
+            $this->logError($e);
+        }
+    }
+
+    public function isAdminRequest(): bool
+    {
+        $adminPrefix = config('core.base.general.admin_dir', 'admin');
+
+        if (empty($adminPrefix)) {
+            return true;
+        }
+
+        return Request::is($adminPrefix . '/*') || Request::is($adminPrefix);
     }
 }

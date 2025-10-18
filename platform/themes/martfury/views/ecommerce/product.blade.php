@@ -4,35 +4,17 @@
     Theme::set('bottomFooter', Theme::partial('footer-product-page', compact('product')));
     Theme::set('pageId', 'product-page');
     Theme::set('headerMobile', Theme::partial('header-mobile-product'));
+    Theme::set('showBottomBarMenu', false);
 @endphp
 
 <div class="ps-page--product">
     <div class="ps-container" id="app">
             <div class="ps-page__container">
                 <div class="ps-page__left">
-                    <div class="ps-product--detail ps-product--fullwidth">
+                    <div class="ps-product--detail ps-product--fullwidth bb-product-detail">
                         <div class="ps-product__header">
-                            <div class="ps-product__thumbnail" data-vertical="true">
-                                <figure>
-                                    <div class="ps-wrapper">
-                                        <div class="ps-product__gallery" data-arrow="false">
-                                            @foreach ($productImages as $img)
-                                                <div class="item">
-                                                    <a href="{{ RvMedia::getImageUrl($img) }}">
-                                                        <img src="{{ RvMedia::getImageUrl($img) }}" alt="{{ $product->name }}"/>
-                                                    </a>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </figure>
-                                <div class="ps-product__variants" data-item="4" data-md="4" data-sm="4" data-arrow="true">
-                                    @foreach ($productImages as $img)
-                                        <div class="item">
-                                            <img src="{{ RvMedia::getImageUrl($img, 'thumb') }}" alt="{{ $product->name }}"/>
-                                        </div>
-                                    @endforeach
-                                </div>
+                            <div class="ps-product__thumbnail">
+                                @include(EcommerceHelper::viewPath('includes.product-gallery'))
                             </div>
                             <div class="ps-product__info">
                                 <h1>{{ $product->name }}</h1>
@@ -53,11 +35,18 @@
                                     @endif
                                 </div>
                                 @if (! EcommerceHelper::hideProductPrice() || EcommerceHelper::isCartEnabled())
-                                    <h4 class="ps-product__price @if ($product->front_sale_price !== $product->price) sale @endif"><span>{{ format_price($product->front_sale_price_with_taxes) }}</span> @if ($product->front_sale_price !== $product->price) &nbsp;<del>{{ format_price($product->price_with_taxes) }} </del> @endif</h4>
+                                    <h4 class="ps-product__price @if ($product->front_sale_price !== $product->price) sale @endif"><span data-bb-value="product-price">{{ format_price($product->front_sale_price_with_taxes) }}</span> @if ($product->front_sale_price !== $product->price) &nbsp;<del data-bb-value="product-original-price">{{ format_price($product->price_with_taxes) }}</del> @endif</h4>
+                                @endif
+                                @if ($product->tax_description)
+                                    <p class="ps-product__tax-text">
+                                        <small class="text-secondary">
+                                            {{ $product->tax_description }}
+                                        </small>
+                                    </p>
                                 @endif
                                 <div class="ps-product__desc">
                                     @if (is_plugin_active('marketplace') && $product->store_id)
-                                        <p>{{ __('Sold By') }}: <a href="{{ $product->store->url }}"><strong>{{ $product->store->name }}</strong></a></p>
+                                        <p>{{ __('Sold By') }}: <a href="{{ $product->store->url }}"><strong>{{ $product->store->name }} {!! $product->store->badge !!}</strong></a></p>
                                     @endif
 
                                     <div class="ps-list--dot">
@@ -100,7 +89,7 @@
 
                                 <form class="add-to-cart-form" method="POST" action="{{ route('public.cart.add-to-cart') }}">
                                     @csrf
-                                    @if ($product->variations()->count() > 0)
+                                    @if ($product->has_variation)
                                         <div class="pr_switch_wrap">
                                             {!! render_product_swatches($product, [
                                                 'selected' => $selectedAttrs,
@@ -123,13 +112,17 @@
                                                 @elseif  (!$productVariation->with_storehouse_management || $productVariation->quantity < 1)
                                                     <span class="text-success">({{ __('Available') }})</span>
                                                 @elseif ($productVariation->quantity)
-                                                    <span class="text-success">
-                                                    @if ($productVariation->quantity != 1)
-                                                            ({{ __(':number products available', ['number' => $productVariation->quantity]) }})
-                                                        @else
-                                                            ({{ __(':number product available', ['number' => $productVariation->quantity]) }})
-                                                        @endif
-                                                </span>
+                                                    @if (EcommerceHelper::showNumberOfProductsInProductSingle())
+                                                        <span class="text-success">
+                                                            @if ($productVariation->quantity != 1)
+                                                                    ({{ __(':number products available', ['number' => $productVariation->quantity]) }})
+                                                                @else
+                                                                    ({{ __(':number product available', ['number' => $productVariation->quantity]) }})
+                                                                @endif
+                                                        </span>
+                                                    @else
+                                                        <span class="text-success">({{ __('In stock') }})</span>
+                                                    @endif
                                                 @endif
                                             @endif
                                         @endif
@@ -165,7 +158,7 @@
                                 </form>
                                 <div class="ps-product__specification">
 
-                                    <p @if (!$product->sku) style="display: none" @endif><strong>{{ __('SKU') }}:</strong> <span id="product-sku">{{ $product->sku }}</span></p>
+                                    <p @if (!$product->sku) style="display: none" @endif><strong>{{ __('SKU') }}:</strong> <span data-bb-value="product-sku">{{ $product->sku }}</span></p>
                                     @if ($product->categories->isNotEmpty())
                                         <p class="categories"><strong> {{ __('Categories') }}:</strong>
                                             @foreach($product->categories as $category)
@@ -182,7 +175,7 @@
                                         </p>
                                     @endif
                                 </div>
-                                <div>
+                                <div class="ps-product__sharing">
                                     <span>{{ __('Share:') }}</span>
 
                                     {!! Theme::renderSocialSharing($product->url, SeoHelper::getDescription(), $product->image) !!}
@@ -234,7 +227,7 @@
 
                                 @if (is_plugin_active('marketplace') && $product->store_id)
                                     <div class="ps-tab" id="tab-vendor">
-                                        <h4>{{ $product->store->name }}</h4>
+                                        <h4>{{ $product->store->name }} {!! $product->store->badge !!}</h4>
                                         <div>
                                             {!! BaseHelper::clean($product->store->content) !!}
                                         </div>
@@ -247,24 +240,35 @@
 
                                 @if (is_plugin_active('faq') && count($product->faq_items) > 0)
                                     <div class="ps-tab" id="tab-faq">
-                                        <div class="accordion" id="faq-accordion">
-                                            @foreach($product->faq_items as $faq)
-                                                <div class="card">
-                                                    <div class="card-header" id="heading-faq-{{ $loop->index }}">
-                                                        <h2 class="mb-0">
-                                                            <button class="btn btn-link btn-block text-left @if (!$loop->first) collapsed @endif" type="button" data-toggle="collapse" data-target="#collapse-faq-{{ $loop->index }}" aria-expanded="true" aria-controls="collapse-faq-{{ $loop->index }}">
-                                                                {!! BaseHelper::clean($faq[0]['value']) !!}
+                                        <div class="ps-faq-wrapper">
+                                            <div class="ps-faq-header mb-4">
+                                                <h3 class="ps-faq-title">{{ __('Frequently Asked Questions') }}</h3>
+                                                <p class="ps-faq-subtitle text-muted">{{ __('Find answers to common questions about this product') }}</p>
+                                            </div>
+                                            <div class="accordion ps-faq-accordion" id="faq-accordion">
+                                                @foreach($product->faq_items as $faq)
+                                                    <div class="accordion-item ps-faq-item @if ($loop->first) first-item @endif">
+                                                        <h2 class="accordion-header" id="heading-faq-{{ $loop->index }}">
+                                                            <button class="accordion-button ps-faq-question @if (!$loop->first) collapsed @endif" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-faq-{{ $loop->index }}" aria-expanded="@if ($loop->first) true @else false @endif" aria-controls="collapse-faq-{{ $loop->index }}">
+                                                                <span class="ps-faq-icon me-3">
+                                                                    <i class="icon-question-circle"></i>
+                                                                </span>
+                                                                <span class="ps-faq-question-text">{!! BaseHelper::clean($faq[0]['value']) !!}</span>
+                                                                <span class="ps-faq-toggle-icon ms-auto">
+                                                                    <i class="icon-chevron-down"></i>
+                                                                </span>
                                                             </button>
                                                         </h2>
-                                                    </div>
-
-                                                    <div id="collapse-faq-{{ $loop->index }}" class="collapse @if ($loop->first) show @endif" aria-labelledby="heading-faq-{{ $loop->index }}" data-parent="#faq-accordion">
-                                                        <div class="card-body">
-                                                            {!! BaseHelper::clean($faq[1]['value']) !!}
+                                                        <div id="collapse-faq-{{ $loop->index }}" class="accordion-collapse collapse @if ($loop->first) show @endif" aria-labelledby="heading-faq-{{ $loop->index }}" data-bs-parent="#faq-accordion">
+                                                            <div class="accordion-body ps-faq-answer">
+                                                                <div class="ps-faq-answer-content">
+                                                                    {!! BaseHelper::clean($faq[1]['value']) !!}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            @endforeach
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
                                 @endif
@@ -282,7 +286,7 @@
                     </aside>
                     @if (is_plugin_active('ads'))
                         <aside class="widget">
-                            {!! AdsManager::display('product-sidebar') !!}
+                            {!! AdsManager::display('product-sidebar', ['class' => 'mb-3'], false) !!}
                         </aside>
                     @endif
                 </div>

@@ -47,7 +47,7 @@ class PublicController extends BaseController
 {
     public function __construct()
     {
-        $version = get_cms_version();
+        $version = EcommerceHelper::getAssetVersion();
 
         Theme::asset()
             ->add('customer-style', 'vendor/core/plugins/ecommerce/css/customer.css', ['bootstrap-css'], version: $version);
@@ -81,7 +81,7 @@ class PublicController extends BaseController
 
     public function getEditAccount()
     {
-        SeoHelper::setTitle(__('Profile'));
+        SeoHelper::setTitle(__('Account Settings'));
 
         Theme::asset()
             ->add(
@@ -105,15 +105,16 @@ class PublicController extends BaseController
         }
 
         Theme::breadcrumb()
-            ->add(__('Profile'), route('customer.edit-account'));
+            ->add(__('Account Settings'), route('customer.edit-account'));
 
         $customer = auth('customer')->user();
 
         $form = CustomerForm::createFromModel($customer);
+        $passwordForm = ChangePasswordForm::create();
 
         return Theme::scope(
             'ecommerce.customers.edit-account',
-            compact('form'),
+            compact('form', 'passwordForm'),
             'plugins/ecommerce::themes.customers.edit-account'
         )
             ->render();
@@ -132,10 +133,16 @@ class PublicController extends BaseController
                 $model = $form->getModel();
                 $request = $form->getRequest();
 
-                $model->fill($request->except(['email']));
+                $data = $request->input();
 
-                if (get_ecommerce_setting('enabled_customer_dob_field', true) && $request->has('dob')) {
-                    $model->dob = Carbon::createFromFormat(BaseHelper::getDateFormat(), $request->input('dob'));
+                if ($model->email) {
+                    $data = $request->except(['email']);
+                }
+
+                $model->fill($data);
+
+                if (get_ecommerce_setting('enabled_customer_dob_field', true) && ($dob = $request->input('dob'))) {
+                    $model->dob = Carbon::createFromFormat(BaseHelper::getDateFormat(), $dob);
                 }
 
                 $model->save();
@@ -151,18 +158,8 @@ class PublicController extends BaseController
 
     public function getChangePassword()
     {
-        SeoHelper::setTitle(__('Change Password'));
-
-        Theme::breadcrumb()
-            ->add(__('Change Password'), route('customer.change-password'));
-
-        $form = ChangePasswordForm::create();
-
-        return Theme::scope(
-            'ecommerce.customers.change-password',
-            compact('form'),
-            'plugins/ecommerce::themes.customers.change-password'
-        )->render();
+        // Redirect to the edit account page since change password is now part of it
+        return redirect()->route('customer.edit-account');
     }
 
     public function postChangePassword(UpdatePasswordRequest $request)
@@ -182,6 +179,7 @@ class PublicController extends BaseController
 
         return $this
             ->httpResponse()
+            ->setNextUrl(route('customer.edit-account'))
             ->setMessage(trans('core/acl::users.password_update_success'));
     }
 
@@ -191,7 +189,7 @@ class PublicController extends BaseController
 
         $addresses = Address::query()
             ->where('customer_id', auth('customer')->id())
-            ->orderByDesc('is_default')->latest()
+            ->latest('is_default')->latest()
             ->paginate(10);
 
         Theme::breadcrumb()
@@ -509,8 +507,7 @@ class PublicController extends BaseController
         SeoHelper::setTitle(__('Order Return Requests'));
 
         $requests = OrderReturn::query()
-            ->where('user_id', auth('customer')->id())
-            ->orderByDesc('created_at')
+            ->where('user_id', auth('customer')->id())->latest()
             ->withCount('items')
             ->paginate(10);
 
@@ -574,8 +571,7 @@ class PublicController extends BaseController
                             });
                     });
             })
-            ->where('product_type', ProductTypeEnum::DIGITAL)
-            ->orderByDesc('created_at')
+            ->where('product_type', ProductTypeEnum::DIGITAL)->latest()
             ->with(['order', 'product', 'productFiles', 'product.productFiles'])
             ->paginate(10);
 
@@ -759,7 +755,7 @@ class PublicController extends BaseController
                 $query->wherePublished();
             })
             ->with(['product', 'product.slugable'])
-            ->orderByDesc('ec_reviews.created_at')
+            ->latest('ec_reviews.created_at')
             ->paginate(12);
 
         $products = $productRepository->productsNeedToReviewByCustomer($customerId);

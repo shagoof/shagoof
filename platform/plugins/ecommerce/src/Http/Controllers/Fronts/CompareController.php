@@ -36,10 +36,10 @@ class CompareController extends BaseController
             $productIds = $itemIds->all();
 
             $products = $this->productRepository
-                ->getProductsByIds($productIds, array_merge([
+                ->getProductsByIds($productIds, [
                     'take' => 10,
                     'with' => EcommerceHelper::withProductEagerLoadingRelations(),
-                ], EcommerceHelper::withReviewsParams()));
+                ]);
 
             $attributeSets = collect();
 

@@ -99,7 +99,8 @@ class BaseServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this
-            ->loadAndPublishConfigurations(['permissions', 'assets'])
+            ->loadAndPublishConfigurations(['assets'])
+            ->loadAndPublishConfigurations(['permissions'])
             ->loadAndPublishViews()
             ->loadAnonymousComponents()
             ->loadAndPublishTranslations()
@@ -115,9 +116,10 @@ class BaseServiceProvider extends ServiceProvider
             do_action(BASE_ACTION_INIT);
         });
 
-        $this->registerDashboardMenus();
-
-        $this->registerPanelSections();
+        if (BaseHelper::isAdminRequest()) {
+            $this->registerDashboardMenus();
+            $this->registerPanelSections();
+        }
 
         Paginator::useBootstrap();
 
@@ -168,48 +170,53 @@ class BaseServiceProvider extends ServiceProvider
 
     protected function configureIni(): void
     {
-        $currentLimit = @ini_get('memory_limit');
-        $currentLimitInt = Helper::convertHrToBytes($currentLimit);
+        static $memoryLimit = null;
+        static $maxExecutionTime = null;
 
+        if ($memoryLimit === null) {
+            $memoryLimit = @ini_get('memory_limit');
+        }
+
+        $currentLimitInt = Helper::convertHrToBytes($memoryLimit);
         $baseConfig = $this->getBaseConfig();
+        $configMemoryLimit = Arr::get($baseConfig, 'memory_limit');
 
-        $memoryLimit = Arr::get($baseConfig, 'memory_limit');
-
-        if (! $memoryLimit) {
-            if (Helper::isIniValueChangeable('memory_limit') === false) {
-                $memoryLimit = $currentLimit;
-            } else {
-                $memoryLimit = '256M';
-            }
+        if (! $configMemoryLimit) {
+            $configMemoryLimit = Helper::isIniValueChangeable('memory_limit') === false
+                ? $memoryLimit
+                : '256M';
         }
 
-        $limitInt = Helper::convertHrToBytes($memoryLimit);
+        $limitInt = Helper::convertHrToBytes($configMemoryLimit);
         if ($currentLimitInt !== -1 && ($limitInt === -1 || $limitInt > $currentLimitInt)) {
-            BaseHelper::iniSet('memory_limit', $memoryLimit);
+            BaseHelper::iniSet('memory_limit', $configMemoryLimit);
         }
 
-        $maxExecutionTime = Arr::get($baseConfig, 'max_execution_time');
-
-        $currentExecutionTimeLimit = @ini_get('max_execution_time');
-
-        if ($currentExecutionTimeLimit < $maxExecutionTime) {
-            BaseHelper::iniSet('max_execution_time', $maxExecutionTime);
+        if ($maxExecutionTime === null) {
+            $maxExecutionTime = @ini_get('max_execution_time');
         }
+
+        $configMaxExecutionTime = Arr::get($baseConfig, 'max_execution_time');
+        if ($maxExecutionTime < $configMaxExecutionTime) {
+            BaseHelper::iniSet('max_execution_time', $configMaxExecutionTime);
+        }
+    }
+
+    protected function getConfigValue(string $key, mixed $default = null): mixed
+    {
+        return config("core.base.general.{$key}", $default);
     }
 
     protected function forceSSL(): void
     {
-        $baseConfig = $this->getBaseConfig();
-
-        $forceUrl = Arr::get($baseConfig, 'force_root_url');
+        $forceUrl = $this->getConfigValue('force_root_url');
         if (! empty($forceUrl)) {
-            URL::forceRootUrl($forceUrl);
+            URL::useOrigin($forceUrl);
         }
 
-        $forceSchema = Arr::get($baseConfig, 'force_schema');
+        $forceSchema = $this->getConfigValue('force_schema');
         if (! empty($forceSchema)) {
             $this->app['request']->server->set('HTTPS', 'on');
-
             URL::forceScheme($forceSchema);
         }
     }
@@ -261,7 +268,6 @@ class BaseServiceProvider extends ServiceProvider
                 ! $this->app->environment(['testing', 'production']),
             'debugbar.capture_ajax' => false,
             'debugbar.remote_sites_path' => '',
-            'core.base.general.google_fonts' => GoogleFonts::getFonts(),
             'scribe.type' => 'static',
             'scribe.assets_directory' => 'vendor/core/packages/api',
             'scribe.routes' => [
@@ -300,8 +306,17 @@ class BaseServiceProvider extends ServiceProvider
          * @var SettingStore $setting
          */
         $setting = $this->app[SettingStore::class];
-        $timezone = $setting->get('time_zone', $config->get('app.timezone'));
-        $locale = $setting->get('locale', Arr::get($baseConfig, 'locale', $config->get('app.locale')));
+
+        $cacheKey = 'core.base.boot_settings';
+        $bootSettings = cache()->remember($cacheKey, 3600, function () use ($setting, $config) {
+            return [
+                'timezone' => $setting->get('time_zone', $config->get('app.timezone')),
+                'locale' => $setting->get('locale', $config->get('app.locale')),
+            ];
+        });
+
+        $timezone = $bootSettings['timezone'];
+        $locale = $bootSettings['locale'];
 
         $this->app->setLocale($locale);
 
@@ -321,6 +336,9 @@ class BaseServiceProvider extends ServiceProvider
                 'view.officeapps.live.com/op/embed.aspx',
                 'onedrive.live.com/embed',
                 'open.spotify.com/embed',
+                'www.googletagmanager.com',
+                'www.facebook.com/plugins',
+                'tiktok.com/embed',
                 parse_url($config->get('app.url'), PHP_URL_HOST),
             ];
 
@@ -345,6 +363,8 @@ class BaseServiceProvider extends ServiceProvider
             ],
             'ziggy.except' => ['debugbar.*'],
             'datatables-buttons.pdf_generator' => 'excel',
+            'datatables-html.script' => 'core/table::script',
+            'datatables-html.editor' => 'core/table::editor',
             'excel.exports.csv.use_bom' => true,
             'dompdf.public_path' => public_path(),
             'database.connections.mysql.strict' => Arr::get($baseConfig, 'db_strict_mode'),

@@ -5,6 +5,7 @@ namespace Botble\Ecommerce\Tables;
 use Botble\Base\Facades\Form;
 use Botble\Base\Facades\Html;
 use Botble\Ecommerce\Enums\ProductTypeEnum;
+use Botble\Ecommerce\Enums\StockStatusEnum;
 use Botble\Ecommerce\Models\ProductAttributeSet;
 use Botble\Ecommerce\Models\ProductVariation;
 use Botble\Table\Abstracts\TableAbstract;
@@ -82,6 +83,10 @@ class ProductVariationTable extends TableAbstract
                 return Html::tag('div', format_price($item->product->front_sale_price)) . $salePrice;
             })
             ->editColumn('quantity', function (ProductVariation $item) {
+                if ($item->product->isOutOfStock()) {
+                    return StockStatusEnum::OUT_OF_STOCK()->toHtml();
+                }
+
                 return $item->product->with_storehouse_management ? $item->product->quantity : '&#8734;';
             })
             ->editColumn('is_default', function (ProductVariation $item) {
@@ -257,6 +262,7 @@ class ProductVariationTable extends TableAbstract
                 'title' => $attributeSet->title,
                 'class' => 'text-start',
                 'orderable' => false,
+                'searchable' => false,
                 'width' => '90',
                 'search_data' => [
                     'attribute_set_id' => $attributeSet->id,

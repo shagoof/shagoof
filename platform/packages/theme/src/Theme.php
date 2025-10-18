@@ -6,6 +6,7 @@ use Botble\Base\Facades\AdminHelper;
 use Botble\Base\Facades\BaseHelper;
 use Botble\Base\Facades\Html;
 use Botble\Media\Facades\RvMedia;
+use Botble\SeoHelper\Facades\SeoHelper;
 use Botble\Setting\Facades\Setting;
 use Botble\Theme\Contracts\Theme as ThemeContract;
 use Botble\Theme\Exceptions\UnknownPartialFileException;
@@ -840,6 +841,20 @@ class Theme implements ThemeContract
                 ->writeScript('breadcrumb-schema', $schema, attributes: ['type' => 'application/ld+json']);
         }
 
+        $websiteSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => rescue(fn () => SeoHelper::openGraph()->getProperty('site_name')),
+            'url' => url(''),
+        ];
+
+        $websiteSchema = json_encode($websiteSchema, JSON_UNESCAPED_UNICODE);
+
+        $this
+            ->asset()
+            ->container('header')
+            ->writeScript('website-schema', $websiteSchema, attributes: ['type' => 'application/ld+json']);
+
         return $this->view->make('packages/theme::partials.header')->render();
     }
 
@@ -870,9 +885,9 @@ class Theme implements ThemeContract
         require package_path('theme/routes/public.php');
     }
 
-    public function registerRoutes(Closure|callable $closure): Router
+    public function registerRoutes(Closure|callable $closure, array $middlewares = ['web', 'core']): Router
     {
-        return Route::group(['middleware' => ['web', 'core']], function () use ($closure): void {
+        return Route::group(['middleware' => $middlewares], function () use ($closure): void {
             Route::group(apply_filters(BASE_FILTER_GROUP_PUBLIC_ROUTE, []), fn () => $closure());
         });
     }
@@ -900,23 +915,31 @@ class Theme implements ThemeContract
         return $this;
     }
 
-    public function getThemeScreenshot(string $theme): string
+    public function getThemeScreenshot(string $theme, ?string $name = null): string
     {
         $publicThemeName = Theme::getPublicThemeName();
 
         $themeName = Theme::getThemeName() == $theme && $publicThemeName ? $publicThemeName : $theme;
 
-        $screenshot = public_path($this->getConfig('themeDir') . '/' . $themeName . '/screenshot.png');
+        $screenshotName = $name ?: 'screenshot.png';
+
+        $screenshot = public_path($this->getConfig('themeDir') . '/' . $themeName . '/' . $screenshotName);
 
         if (! File::exists($screenshot)) {
-            $screenshot = $this->path($theme) . '/screenshot.png';
+            $screenshot = $this->path($theme) . '/' . $screenshotName;
+        }
+
+        if (! File::exists($screenshot)) {
+            $screenshot = theme_path($theme . '/' . $screenshotName);
         }
 
         if (! File::exists($screenshot)) {
             return RvMedia::getDefaultImage();
         }
 
-        return 'data:image/png;base64,' . base64_encode(File::get($screenshot));
+        $guessedMimeType = File::mimeType($screenshot);
+
+        return 'data:' . $guessedMimeType . ';base64,' . base64_encode(File::get($screenshot));
     }
 
     public function registerThemeIconFields(array $icons, array $css = [], array $js = []): void
@@ -1073,8 +1096,16 @@ class Theme implements ThemeContract
         $height = theme_option('logo_height') ?: $maxHeight;
 
         if ($height) {
-            $attributes['style'] = sprintf('max-height: %s', is_numeric($height) ? "{$height}px" : $height);
+            $maxHeightStyle = 'max-height: %s';
+
+            if (setting('optimize_inline_css', 0)) {
+                $maxHeightStyle = 'max-height: %s !important';
+            }
+
+            $attributes['style'] = sprintf($maxHeightStyle, is_numeric($height) ? "{$height}px" : $height);
         }
+
+        $attributes['loading'] = false;
 
         return apply_filters('theme_logo_image', RvMedia::image($logo, $this->getSiteTitle(), attributes: $attributes, lazy: false));
     }

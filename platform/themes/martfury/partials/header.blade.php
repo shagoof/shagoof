@@ -1,5 +1,5 @@
 {!! Theme::partial('header-meta') !!}
-    <body @if (Theme::get('pageId')) id="{{ Theme::get('pageId') }}" @endif @if (BaseHelper::isRtlEnabled()) dir="rtl" @endif>
+    <body {!! Theme::bodyAttributes() !!} @if (Theme::get('pageId')) id="{{ Theme::get('pageId') }}" @endif>
         {!! apply_filters(THEME_FRONT_BODY, null) !!}
         <div id="alert-container"></div>
 
@@ -54,14 +54,14 @@
                             <div class="header__actions">
                                 {!! apply_filters('before_theme_header_actions', null) !!}
                                 @if (EcommerceHelper::isCompareEnabled())
-                                    <a class="header__extra btn-compare" href="{{ route('public.compare') }}"><i class="icon-chart-bars"></i><span><i>{{ Cart::instance('compare')->count() }}</i></span></a>
+                                    <a class="header__extra btn-compare" href="{{ route('public.compare') }}" title="{{ __('Compare products') }}"><i class="icon-chart-bars"></i><span><i>{{ Cart::instance('compare')->count() }}</i></span></a>
                                 @endif
                                 @if (EcommerceHelper::isWishlistEnabled())
-                                    <a class="header__extra btn-wishlist" href="{{ route('public.wishlist') }}"><i class="icon-heart"></i><span><i>{{ !auth('customer')->check() ? Cart::instance('wishlist')->count() : auth('customer')->user()->wishlist()->count() }}</i></span></a>
+                                    <a class="header__extra btn-wishlist" href="{{ route('public.wishlist') }}" title="{{ __('Wishlist') }}"><i class="icon-heart"></i><span><i>{{ !auth('customer')->check() ? Cart::instance('wishlist')->count() : auth('customer')->user()->wishlist()->count() }}</i></span></a>
                                 @endif
                                 @if (EcommerceHelper::isCartEnabled())
                                     <div class="ps-cart--mini">
-                                        <a class="header__extra btn-shopping-cart" href="{{ route('public.cart') }}"><i class="icon-bag2"></i><span><i>{{ Cart::instance('cart')->count() }}</i></span></a>
+                                        <a class="header__extra btn-shopping-cart" href="{{ route('public.cart') }}" title="{{ __('Shopping cart') }}"><i class="icon-bag2"></i><span><i>{{ Cart::instance('cart')->count() }}</i></span></a>
                                         <div class="ps-cart--mobile">
                                             {!! Theme::partial('cart') !!}
                                         </div>
@@ -103,8 +103,8 @@
                         ]) !!}
                         @if (is_plugin_active('ecommerce'))
                             <ul class="navigation__extra">
-                                @if (is_plugin_active('marketplace'))
-                                    <li><a href="{{ !auth('customer')->check() ? route('customer.register') : (auth('customer')->user()->is_vendor ? route('marketplace.vendor.dashboard') : route('marketplace.vendor.become-vendor')) }}">{{ theme_option('sell_on_site_text') ?: __('Sell On Martfury') }}</a></li>
+                                @if (is_plugin_active('marketplace') && theme_option('show_sell_on_marketplace_link', 'yes') == 'yes')
+                                    <li class="sell-on-marketplace-link"><a href="{{ !auth('customer')->check() ? route('customer.register') : (auth('customer')->user()->is_vendor ? route('marketplace.vendor.dashboard') : route('marketplace.vendor.become-vendor')) }}">{{ theme_option('sell_on_site_text') ?: __('Sell On Martfury') }}</a></li>
                                 @endif
                                 @if (EcommerceHelper::isOrderTrackingEnabled())
                                     <li><a href="{{ route('public.orders.tracking') }}">{{ __('Track your order') }}</a></li>
@@ -161,13 +161,15 @@
             </div>
         @endif
 
-        <div class="navigation--list">
-            <div class="navigation__content">
-                <a class="navigation__item ps-toggle--sidebar" href="#menu-mobile"><i class="icon-menu"></i><span> {{ __('Menu') }}</span></a>
-                <a class="navigation__item ps-toggle--sidebar" href="#navigation-mobile"><i class="icon-list4"></i><span> {{ __('Categories') }}</span></a>
-                <a class="navigation__item ps-toggle--sidebar" href="#search-sidebar"><i class="icon-magnifier"></i><span> {{ __('Search') }}</span></a>
-                <a class="navigation__item ps-toggle--sidebar" href="#cart-mobile"><i class="icon-bag2"></i><span> {{ __('Cart') }}</span></a></div>
-        </div>
+        @if (Theme::get('showBottomBarMenu', true))
+            <div class="navigation--list" @if(theme_option('bottom_bar_menu_show_text', 'yes') != 'yes')data-hide-text="true"@endif style="--bottom-bar-menu-text-font-size: {{ theme_option('bottom_bar_menu_text_font_size', 14) }}px;">
+                <div class="navigation__content">
+                    <a class="navigation__item ps-toggle--sidebar" href="#menu-mobile"><i class="icon-menu"></i><span> {{ __('Menu') }}</span></a>
+                    <a class="navigation__item ps-toggle--sidebar" href="#navigation-mobile"><i class="icon-list4"></i><span> {{ __('Categories') }}</span></a>
+                    <a class="navigation__item ps-toggle--sidebar" href="#search-sidebar"><i class="icon-magnifier"></i><span> {{ __('Search') }}</span></a>
+                    <a class="navigation__item ps-toggle--sidebar" href="#cart-mobile"><i class="icon-bag2"></i><span> {{ __('Cart') }}</span></a></div>
+            </div>
+        @endif
 
         @if (is_plugin_active('ecommerce'))
             <div class="ps-panel--sidebar" id="search-sidebar" style="display: none">

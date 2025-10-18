@@ -3,6 +3,7 @@
 namespace Botble\Mollie\Providers;
 
 use Botble\Base\Facades\Html;
+use Botble\Mollie\Forms\MolliePaymentMethodForm;
 use Botble\Mollie\Services\Gateways\MolliePaymentService;
 use Botble\Payment\Enums\PaymentMethodEnum;
 use Botble\Payment\Facades\PaymentMethods;
@@ -66,14 +67,10 @@ class HookServiceProvider extends ServiceProvider
                 try {
                     $paymentService = (new MolliePaymentService());
 
-                    do_action('payment_before_making_api_request', MOLLIE_PAYMENT_METHOD_NAME, ['payment_id' => $payment->charge_id]);
-
                     $paymentDetail = $paymentService->getPaymentDetails($payment->charge_id);
 
-                    do_action('payment_after_api_response', MOLLIE_PAYMENT_METHOD_NAME, ['payment_id' => $payment->charge_id], (array) $paymentDetail);
-
                     if ($paymentDetail) {
-                        $data = view('plugins/mollie::detail', ['payment' => $paymentDetail])->render();
+                        $data .= view('plugins/mollie::detail', ['payment' => $paymentDetail])->render();
                     }
                 } catch (Exception) {
                     return $data;
@@ -86,7 +83,7 @@ class HookServiceProvider extends ServiceProvider
 
     public function addPaymentSettings(?string $settings): string
     {
-        return $settings . view('plugins/mollie::settings')->render();
+        return $settings . MolliePaymentMethodForm::create()->renderForm();
     }
 
     public function registerMollieMethod(?string $html, array $data): ?string
@@ -115,8 +112,9 @@ class HookServiceProvider extends ServiceProvider
                     'value' => number_format((float) $paymentData['amount'], 2, '.', ''),
                 ],
                 'description' => $paymentData['description'],
-                'redirectUrl' => PaymentHelper::getRedirectURL(),
-                'webhookUrl' => route('mollie.payment.callback', $paymentData['checkout_token']),
+                'redirectUrl' => PaymentHelper::getRedirectURL($paymentData['checkout_token']),
+                'cancelUrl' => PaymentHelper::getCancelURL($paymentData['checkout_token']),
+                'webhookUrl' => route('mollie.payment.webhook', $paymentData['checkout_token']),
                 'metadata' => [
                     'order_id' => $paymentData['order_id'],
                     'customer_id' => $paymentData['customer_id'],

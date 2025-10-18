@@ -110,6 +110,7 @@ class EditorManagement {
                     'blockQuote',
                     'insertTable',
                     'mediaEmbed',
+                    'bootstrapGrid',
                     'undo',
                     'redo',
                     'findAndReplace',
@@ -400,5 +401,28 @@ $(() => {
 
     $(document).on('shown.bs.modal', function () {
         window.EDITOR.init()
+    })
+
+    document.addEventListener('core-shortcode-config-loaded', () => {
+        setTimeout(() => {
+            if (! window.EDITOR) return
+
+            const $modalEditors = $('.shortcode-admin-config').find('.editor-ckeditor, .editor-tinymce')
+
+            $modalEditors.each(function() {
+                const $editor = $(this)
+                const originalId = $editor.attr('id')
+
+                if (originalId) {
+                    const uniqueId = originalId + '_shortcode_modal_' + Date.now()
+
+                    $editor.attr('id', uniqueId)
+
+                    $(`label[for="${originalId}"]`).attr('for', uniqueId)
+
+                    window.EDITOR.init(uniqueId)
+                }
+            })
+        }, 100)
     })
 })

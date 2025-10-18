@@ -6,7 +6,7 @@ use Botble\Base\Http\Actions\DeleteResourceAction;
 use Botble\Base\Http\Controllers\BaseController;
 use Botble\Marketplace\Facades\MarketplaceHelper;
 use Botble\Marketplace\Models\Message;
-use Botble\Marketplace\Tables\MessageTable;
+use Botble\Marketplace\Tables\Fronts\MessageTable;
 
 class MessageController extends BaseController
 {
@@ -24,7 +24,7 @@ class MessageController extends BaseController
         abort_unless(MarketplaceHelper::isEnabledMessagingSystem(), 404);
 
         $message = Message::query()
-            ->where('store_id', auth('customer')->user()->store->id)
+            ->where('store_id', auth('customer')->user()->store?->id)
             ->with(['store', 'customer'])
             ->findOrFail($id);
 
@@ -38,7 +38,7 @@ class MessageController extends BaseController
         abort_unless(MarketplaceHelper::isEnabledMessagingSystem(), 404);
 
         $message = Message::query()
-            ->where('store_id', auth('customer')->user()->store->id)
+            ->where('store_id', auth('customer')->user()->store?->id)
             ->findOrFail($id);
 
         return DeleteResourceAction::make($message);

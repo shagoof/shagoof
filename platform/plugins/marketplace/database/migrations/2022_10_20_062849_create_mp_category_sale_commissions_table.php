@@ -7,7 +7,9 @@ use Illuminate\Support\Facades\Schema;
 return new class () extends Migration {
     public function up(): void
     {
-        Schema::dropIfExists('mp_category_sale_commissions');
+        if (Schema::hasTable('mp_category_sale_commissions')) {
+            return;
+        }
 
         Schema::create('mp_category_sale_commissions', function (Blueprint $table): void {
             $table->id();

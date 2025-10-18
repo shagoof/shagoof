@@ -34,6 +34,7 @@ class Order extends BaseModel
         'shipping_method',
         'shipping_option',
         'shipping_amount',
+        'payment_fee',
         'description',
         'coupon_code',
         'discount_amount',
@@ -352,6 +353,10 @@ class Order extends BaseModel
                 'ec_products.order',
                 'ec_products.created_at',
                 'ec_products.is_variation',
+                'ec_products.with_storehouse_management',
+                'ec_products.stock_status',
+                'ec_products.quantity',
+                'ec_products.allow_checkout_when_out_of_stock',
             ],
             'with' => [
                 'variationProductAttributes',

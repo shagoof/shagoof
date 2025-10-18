@@ -35,7 +35,7 @@ class ReviewController extends BaseController
         }
 
         $results = [];
-        if ($request->hasFile('images')) {
+        if (EcommerceHelper::isCustomerReviewImageUploadEnabled() && $request->hasFile('images')) {
             $images = (array) $request->file('images', []);
             foreach ($images as $image) {
                 $result = RvMedia::handleUpload($image, 0, 'reviews');
@@ -91,10 +91,10 @@ class ReviewController extends BaseController
             'ec_products.id' => $slug->reference_id,
         ];
 
-        $product = get_products(array_merge([
+        $product = get_products([
                 'condition' => $condition,
                 'take' => 1,
-            ], EcommerceHelper::withReviewsParams()));
+            ]);
 
         abort_unless($product, 404);
 
@@ -141,8 +141,10 @@ class ReviewController extends BaseController
 
         $star = $request->integer('star');
         $perPage = $request->integer('per_page', 10);
+        $search = $request->string('search')->trim();
+        $sortBy = $request->string('sort_by', 'newest');
 
-        $reviews = EcommerceHelper::getProductReviews($product, $star, $perPage);
+        $reviews = EcommerceHelper::getProductReviews($product, $star, $perPage, $search, $sortBy);
 
         if ($star) {
             $message = __(':total review(s) ":star star" for ":product"', [

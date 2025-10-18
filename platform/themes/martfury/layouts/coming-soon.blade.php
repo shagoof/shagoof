@@ -1,5 +1,5 @@
 {!! Theme::partial('header-meta') !!}
-<body @if (BaseHelper::siteLanguageDirection() == 'rtl') dir="rtl" @endif @if (Theme::get('pageId')) id="{{ Theme::get('pageId') }}" @endif>
+<body {!! Theme::bodyAttributes() !!} @if (Theme::get('pageId')) id="{{ Theme::get('pageId') }}" @endif>
 <div class="ps-page--comming-soon">
     <div class="container">
         <div class="ps-page__header">

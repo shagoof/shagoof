@@ -2,7 +2,6 @@
 
 namespace Botble\Location;
 
-use Botble\Base\Enums\BaseStatusEnum;
 use Botble\Base\Models\BaseQueryBuilder;
 use Botble\Base\Supports\Helper;
 use Botble\Base\Supports\Zipper;
@@ -21,7 +20,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Throwable;
 
 class Location
@@ -30,7 +28,7 @@ class Location
     {
         return State::query()
             ->wherePublished()
-            ->orderBy('order')
+            ->oldest('order')
             ->oldest('name')
             ->pluck('name', 'id')
             ->all();
@@ -45,7 +43,7 @@ class Location
         return City::query()
             ->wherePublished()
             ->where('state_id', $stateId)
-            ->orderBy('order')
+            ->oldest('order')
             ->oldest('name')
             ->pluck('name', 'id')
             ->all();
@@ -57,10 +55,10 @@ class Location
             return null;
         }
 
-        return City::query()->where([
-            'id' => $cityId,
-            'status' => BaseStatusEnum::PUBLISHED,
-        ])->first();
+        return City::query()
+            ->wherePublished()
+            ->where('id', $cityId)
+            ->first();
     }
 
     public function getCityNameById(int|string|null $cityId): ?string
@@ -93,7 +91,7 @@ class Location
         }
 
         if (is_object($model)) {
-            $model = get_class($model);
+            $model = $model::class;
         }
 
         return in_array($model, $this->supportedModels());
@@ -104,14 +102,14 @@ class Location
         return array_keys($this->getSupported());
     }
 
-    public function getSupported(string|object $model = null): array
+    public function getSupported(string|object|null $model = null): array
     {
         if (! $model) {
             return config('plugins.location.general.supported', []);
         }
 
         if (is_object($model)) {
-            $model = get_class($model);
+            $model = $model::class;
         }
 
         return Arr::get(config('plugins.location.general.supported', []), $model, []);
@@ -238,7 +236,7 @@ class Location
             $state['country_id'] = $country->id;
 
             $statesForInserting[] = array_merge($state, [
-                'slug' => Str::slug($state['name']),
+                'slug' => City::createSlug($state['name']),
                 'country_id' => $country->id,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -268,7 +266,7 @@ class Location
             foreach ($item['cities'] as $cityName) {
                 $citiesForInserting[] = [
                     'name' => $cityName,
-                    'slug' => Str::slug($cityName),
+                    'slug' => City::createSlug($cityName),
                     'state_id' => $stateId,
                     'country_id' => $country->id,
                     'created_at' => $now,
@@ -295,12 +293,12 @@ class Location
         ];
     }
 
-    public function filter($model, int|string $cityId = null, string $location = null, int|string $stateId = null)
+    public function filter($model, int|string|null $cityId = null, ?string $location = null, int|string|null $stateId = null)
     {
         if ($model instanceof BaseQueryBuilder) {
-            $className = get_class($model->getModel());
+            $className = $model->getModel()::class;
         } else {
-            $className = get_class($model);
+            $className = $model::class;
         }
 
         if ($this->isSupported($className)) {

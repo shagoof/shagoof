@@ -2,10 +2,14 @@
 
 use Botble\Base\Enums\BaseStatusEnum;
 use Botble\Base\Facades\Assets;
-use Botble\Base\Facades\Html;
+use Botble\Base\Forms\FieldOptions\TagFieldOption;
+use Botble\Base\Forms\FieldOptions\TextFieldOption;
+use Botble\Base\Forms\Fields\TagField;
+use Botble\Base\Forms\Fields\TextField;
 use Botble\Ecommerce\Facades\EcommerceHelper;
 use Botble\Marketplace\Models\Store;
 use Botble\Shortcode\Compilers\Shortcode;
+use Botble\Shortcode\Forms\ShortcodeForm;
 use Botble\Theme\Facades\Theme;
 
 if (is_plugin_active('marketplace')) {
@@ -51,10 +55,36 @@ if (is_plugin_active('marketplace')) {
         $stores = Store::query()
             ->wherePublished()
             ->orderBy('name')
-            ->pluck('name', 'id');
+            ->pluck('name', 'id')
+            ->mapWithKeys(function ($name, $id) {
+                return [$id => ['value' => $id, 'label' => $name]];
+            })
+            ->all();
 
-        return Html::script('vendor/core/core/base/libraries/tagify/tagify.js') .
-            Html::script('vendor/core/core/base/js/tags.js') .
-            Theme::partial('short-codes.marketplace.stores-admin-config', compact('attributes', 'stores'));
+        Assets::addScriptsDirectly([
+            'vendor/core/core/base/libraries/tagify/tagify.js',
+            'vendor/core/core/base/js/tags.js',
+        ]);
+
+        return ShortcodeForm::createFromArray($attributes)
+            ->withLazyLoading()
+            ->add(
+                'title',
+                TextField::class,
+                TextFieldOption::make()
+                    ->label(__('Title'))
+                    ->placeholder(__('Title'))
+            )
+            ->add(
+                'stores',
+                TagField::class,
+                TagFieldOption::make()
+                    ->label(__('Stores'))
+                    ->placeholder(__('Select stores from the list'))
+                    ->addAttribute('class', 'list-tagify')
+                    ->addAttribute('data-list', json_encode($stores))
+            );
     });
+
+    shortcode()->registerLoadingState('marketplace-stores', Theme::getThemeNamespace('partials.short-codes.marketplace.stores-skeleton'));
 }

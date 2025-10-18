@@ -144,6 +144,23 @@
         }
     }
 
+    let initMegaMenu = function () {
+        setTimeout(function () {
+            const $megaMenu = $(document).find('.mega-menu-wrapper')
+
+            if (! $megaMenu.length) {
+                return
+            }
+
+            if ($(window).width() > 1200 && typeof $.fn.masonry !== 'undefined') {
+                $megaMenu.masonry({
+                    itemSelector: '.mega-menu__column',
+                    columnWidth: 200
+                })
+            }
+        }, 500)
+    }
+
     function stickyHeader() {
         let header = $('.header'),
             checkpoint = 50;
@@ -154,6 +171,8 @@
                     let currentPosition = $(this).scrollTop();
                     if (currentPosition > checkpoint) {
                         el.addClass('header--sticky');
+
+                        initMegaMenu()
                     } else {
                         el.removeClass('header--sticky');
                     }
@@ -174,85 +193,186 @@
         }
     }
 
-    function owlCarouselConfig() {
-        let target = $('.owl-slider');
-        if (target.length > 0) {
-            target.each(function () {
-                let el = $(this),
-                    dataAuto = el.data('owl-auto'),
-                    dataLoop = el.data('owl-loop'),
-                    dataSpeed = el.data('owl-speed'),
-                    dataGap = el.data('owl-gap'),
-                    dataNav = el.data('owl-nav'),
-                    dataDots = el.data('owl-dots'),
-                    dataAnimateIn = el.data('owl-animate-in')
-                        ? el.data('owl-animate-in')
-                        : '',
-                    dataAnimateOut = el.data('owl-animate-out')
-                        ? el.data('owl-animate-out')
-                        : '',
-                    dataDefaultItem = el.data('owl-item'),
-                    dataItemXS = el.data('owl-item-xs'),
-                    dataItemSM = el.data('owl-item-sm'),
-                    dataItemMD = el.data('owl-item-md'),
-                    dataItemLG = el.data('owl-item-lg'),
-                    dataItemXL = el.data('owl-item-xl'),
-                    dataNavLeft = el.data('owl-nav-left')
-                        ? el.data('owl-nav-left')
-                        : "<i class='icon-chevron-left'></i>",
-                    dataNavRight = el.data('owl-nav-right')
-                        ? el.data('owl-nav-right')
-                        : "<i class='icon-chevron-right'></i>",
-                    duration = el.data('owl-duration'),
-                    datamouseDrag =
-                        el.data('owl-mousedrag') == 'on' ? true : false;
-                if (
-                    target.children('div, span, a, img, h1, h2, h3, h4, h5, h5')
-                        .length >= 2
-                ) {
+    function initOwlCarousel(container) {
+        let selector = container ? $(container).find('.owl-slider, .owl-carousel') : $('.owl-slider, .owl-carousel');
+        
+        selector.not('.slick-slider').each(function () {
+            let el = $(this);
+            
+            // Skip if already initialized
+            if (el.hasClass('owl-loaded') || el.data('owl.carousel')) {
+                return;
+            }
+            
+            // Check if owlCarousel is available
+            if (typeof $.fn.owlCarousel === 'undefined') {
+                console.error('Owl Carousel plugin is not loaded');
+                return;
+            }
+            
+            let dataAuto = el.data('owl-auto'),
+                dataLoop = el.data('owl-loop'),
+                dataSpeed = el.data('owl-speed'),
+                dataGap = el.data('owl-gap'),
+                dataNav = el.data('owl-nav'),
+                dataDots = el.data('owl-dots'),
+                dataAnimateIn = el.data('owl-animate-in')
+                    ? el.data('owl-animate-in')
+                    : '',
+                dataAnimateOut = el.data('owl-animate-out')
+                    ? el.data('owl-animate-out')
+                    : '',
+                dataDefaultItem = el.data('owl-item'),
+                dataItemXS = el.data('owl-item-xs'),
+                dataItemSM = el.data('owl-item-sm'),
+                dataItemMD = el.data('owl-item-md'),
+                dataItemLG = el.data('owl-item-lg'),
+                dataItemXL = el.data('owl-item-xl'),
+                dataNavLeft = el.data('owl-nav-left')
+                    ? el.data('owl-nav-left')
+                    : "<i class='icon-chevron-left'></i>",
+                dataNavRight = el.data('owl-nav-right')
+                    ? el.data('owl-nav-right')
+                    : "<i class='icon-chevron-right'></i>",
+                duration = el.data('owl-duration'),
+                datamouseDrag =
+                    el.data('owl-mousedrag') == 'on' ? true : false;
+            
+            // Additional data attributes that might be used
+            let dataMargin = el.data('owl-margin'),
+                dataAutoHeight = el.data('owl-autoheight'),
+                dataCenter = el.data('owl-center'),
+                dataMouseDrag = el.data('owl-mouse-drag'),
+                dataTouchDrag = el.data('owl-touch-drag'),
+                dataSmartSpeed = el.data('owl-smart-speed'),
+                dataItems = el.data('owl-items'),
+                dataAutoplayHoverPause = el.data('owl-autoplay-hover-pause'),
+                dataAutoplayTimeout = el.data('owl-autoplay-timeout'),
+                dataResponsive = el.data('owl-responsive');
+            
+            // Check how many items we have - look for direct children that are actual items
+            let itemCount = el.children().length;
+            
+            // If no direct children, check for common item patterns
+            if (itemCount === 0) {
+                itemCount = el.find('> .ps-product, > article, > .item, > div').length;
+            }
+
+            if (itemCount >= 2) {
+                    // Normal carousel initialization for multiple items
                     el.addClass('owl-carousel').owlCarousel({
                         rtl: isRTL,
                         animateIn: dataAnimateIn,
                         animateOut: dataAnimateOut,
-                        margin: dataGap,
+                        margin: dataMargin || dataGap || 0,
                         autoplay: dataAuto,
-                        autoplayTimeout: dataSpeed,
-                        autoplayHoverPause: true,
+                        autoplayTimeout: dataAutoplayTimeout || dataSpeed || 5000,
+                        autoplayHoverPause: dataAutoplayHoverPause !== undefined ? dataAutoplayHoverPause : true,
                         loop: dataLoop,
                         nav: dataNav,
-                        mouseDrag: datamouseDrag,
-                        touchDrag: true,
+                        mouseDrag: dataMouseDrag !== undefined ? dataMouseDrag : datamouseDrag,
+                        touchDrag: dataTouchDrag !== undefined ? dataTouchDrag : true,
                         autoplaySpeed: duration,
                         navSpeed: duration,
                         dotsSpeed: duration,
                         dragEndSpeed: duration,
                         navText: [dataNavLeft, dataNavRight],
                         dots: dataDots,
-                        items: dataDefaultItem,
-                        responsive: {
+                        items: dataItems || dataDefaultItem || 4,
+                        center: dataCenter || false,
+                        autoHeight: dataAutoHeight || false,
+                        smartSpeed: dataSmartSpeed || 450,
+                        responsive: dataResponsive || {
                             0: {
-                                items: dataItemXS,
+                                items: dataItemXS || 1,
                             },
                             480: {
-                                items: dataItemSM,
+                                items: dataItemSM || 2,
                             },
                             768: {
-                                items: dataItemMD,
+                                items: dataItemMD || 3,
                             },
                             992: {
-                                items: dataItemLG,
+                                items: dataItemLG || 4,
                             },
                             1200: {
-                                items: dataItemXL,
+                                items: dataItemXL || 5,
                             },
                             1680: {
-                                items: dataDefaultItem,
+                                items: dataDefaultItem || 6,
                             },
                         },
                     });
+                } else if (itemCount === 1) {
+                    // Special handling for single item
+                    el.addClass('owl-carousel single-item-carousel').owlCarousel({
+                        rtl: isRTL,
+                        items: 1,
+                        dots: false,
+                        nav: false,
+                        loop: false,
+                        mouseDrag: false,
+                        touchDrag: false,
+                        responsive: {
+                            0: {
+                                items: 1,
+                            },
+                            480: {
+                                items: 1,
+                            },
+                            768: {
+                                items: 1,
+                            },
+                            992: {
+                                items: 1,
+                            },
+                            1200: {
+                                items: 1,
+                            },
+                            1680: {
+                                items: 1,
+                            },
+                        }
+                    });
+                } else {
+                    // If no items found, try initializing anyway in case structure is different
+                    el.addClass('owl-carousel').owlCarousel({
+                        rtl: isRTL,
+                        items: dataItems || dataDefaultItem || 4,
+                        nav: dataNav,
+                        dots: dataDots,
+                        loop: dataLoop,
+                        margin: dataMargin || dataGap || 0,
+                        autoplay: dataAuto,
+                        autoplayTimeout: dataAutoplayTimeout || dataSpeed || 5000,
+                        smartSpeed: dataSmartSpeed || 450,
+                        responsive: dataResponsive || {
+                            0: {
+                                items: dataItemXS || 1,
+                            },
+                            480: {
+                                items: dataItemSM || 2,
+                            },
+                            768: {
+                                items: dataItemMD || 3,
+                            },
+                            992: {
+                                items: dataItemLG || 4,
+                            },
+                            1200: {
+                                items: dataItemXL || 5,
+                            },
+                            1680: {
+                                items: dataDefaultItem || 6,
+                            },
+                        }
+                    });
                 }
-            });
-        }
+        });
+    }
+    
+    function owlCarouselConfig() {
+        initOwlCarousel();
     }
 
     function mapConfig() {
@@ -358,33 +478,74 @@
     }
 
     function tabs() {
-        $('.ps-tab-list  li > a ').on('click', function (e) {
-            e.preventDefault();
-            let target = $(this).attr('href');
-            $(this)
-                .closest('li')
-                .siblings('li')
-                .removeClass('active');
-            $(this)
-                .closest('li')
-                .addClass('active');
-            $(target).addClass('active');
-            $(target)
-                .siblings('.ps-tab')
-                .removeClass('active');
+        // Function to activate a tab
+        function activateTab(target, shouldScroll = true) {
+            if (!$(target).length) {
+                return;
+            }
+
+            // Remove active class from all tabs and list items
+            $('.ps-tab').removeClass('active');
             $('.ps-tab-list li').removeClass('active');
+
+            // Add active class to target tab and corresponding list item
+            $(target).addClass('active');
             $('.ps-tab-list li a[href="' + target + '"]').closest('li').addClass('active');
 
-            $('html, body').animate(
-                {
-                    scrollTop: ($(target).offset().top - $('.header--product .navigation').height() - 165) + 'px',
-                },
-                800
-            );
-        });
-        $('.ps-tab-list.owl-slider .owl-item a').on('click', function (e) {
+            // Initialize owl carousel in the activated tab
+            setTimeout(function() {
+                initOwlCarousel(target);
+            }, 100);
+
+            // Scroll to tab if needed
+            if (shouldScroll && $('.header--product .navigation').length) {
+                $('html, body').animate(
+                    {
+                        scrollTop: ($(target).offset().top - $('.header--product .navigation').height() - 165) + 'px',
+                    },
+                    800
+                );
+            }
+        }
+
+        // Check for hash in URL on page load and activate corresponding tab
+        function checkHashOnLoad() {
+            let hash = window.location.hash;
+            if (hash && $(hash).length && $(hash).hasClass('ps-tab')) {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    activateTab(hash, false);
+                }, 100);
+            }
+        }
+
+        // Use event delegation for dynamically loaded content
+        $(document).on('click', '.ps-tab-list  li > a ', function (e) {
             e.preventDefault();
             let target = $(this).attr('href');
+
+            // Update URL hash without triggering scroll
+            if (history.pushState) {
+                history.pushState(null, null, target);
+            } else {
+                window.location.hash = target;
+            }
+
+            activateTab(target, true);
+        });
+
+        $(document).on('click', '.ps-tab-list.owl-slider .owl-item a', function (e) {
+            e.preventDefault();
+            let target = $(this).attr('href');
+
+            // Update URL hash without triggering scroll
+            if (history.pushState) {
+                history.pushState(null, null, target);
+            } else {
+                window.location.hash = target;
+            }
+
+            // Remove active class from owl items
             $(this)
                 .closest('.owl-item')
                 .siblings('.owl-item')
@@ -392,11 +553,20 @@
             $(this)
                 .closest('.owl-item')
                 .addClass('active');
-            $(target).addClass('active');
-            $(target)
-                .siblings('.ps-tab')
-                .removeClass('active');
+
+            activateTab(target, false);
         });
+
+        // Handle browser back/forward buttons
+        $(window).on('hashchange', function() {
+            let hash = window.location.hash;
+            if (hash && $(hash).length && $(hash).hasClass('ps-tab')) {
+                activateTab(hash, false);
+            }
+        });
+
+        // Initialize - check hash on page load
+        checkHashOnLoad();
     }
 
     function rating() {
@@ -849,9 +1019,123 @@
         })
     }
 
+    function sliderMainConfig() {
+        let target = $('.owl-main-slider');
+        if (target.length > 0) {
+            target.each(function () {
+                let el = $(this),
+                    dataAuto = el.data('owl-auto'),
+                    dataLoop = el.data('owl-loop'),
+                    dataSpeed = el.data('owl-speed'),
+                    dataGap = el.data('owl-gap'),
+                    dataNav = el.data('owl-nav'),
+                    dataDots = el.data('owl-dots'),
+                    dataAnimateIn = el.data('owl-animate-in')
+                        ? el.data('owl-animate-in')
+                        : '',
+                    dataAnimateOut = el.data('owl-animate-out')
+                        ? el.data('owl-animate-out')
+                        : '',
+                    dataDefaultItem = el.data('owl-item'),
+                    dataItemXS = el.data('owl-item-xs'),
+                    dataItemSM = el.data('owl-item-sm'),
+                    dataItemMD = el.data('owl-item-md'),
+                    dataItemLG = el.data('owl-item-lg'),
+                    dataItemXL = el.data('owl-item-xl'),
+                    dataNavLeft = el.data('owl-nav-left')
+                        ? el.data('owl-nav-left')
+                        : "<i class='icon-chevron-left'></i>",
+                    dataNavRight = el.data('owl-nav-right')
+                        ? el.data('owl-nav-right')
+                        : "<i class='icon-chevron-right'></i>",
+                    duration = el.data('owl-duration'),
+                    datamouseDrag =
+                        el.data('owl-mousedrag') == 'on' ? true : false;
+                // Check how many items we have
+                let itemCount = target.children('div, span, a, img, h1, h2, h3, h4, h5, h5').length;
+
+                if (itemCount >= 2) {
+                    // Normal carousel initialization for multiple items
+                    el.addClass('owl-carousel').owlCarousel({
+                        rtl: isRTL,
+                        animateIn: dataAnimateIn,
+                        animateOut: dataAnimateOut,
+                        margin: dataGap,
+                        autoplay: dataAuto,
+                        autoplayTimeout: dataSpeed,
+                        autoplayHoverPause: true,
+                        loop: dataLoop,
+                        nav: dataNav,
+                        mouseDrag: datamouseDrag,
+                        touchDrag: true,
+                        autoplaySpeed: duration,
+                        navSpeed: duration,
+                        dotsSpeed: duration,
+                        dragEndSpeed: duration,
+                        navText: [dataNavLeft, dataNavRight],
+                        dots: dataDots,
+                        items: dataDefaultItem,
+                        responsive: {
+                            0: {
+                                items: dataItemXS,
+                            },
+                            480: {
+                                items: dataItemSM,
+                            },
+                            768: {
+                                items: dataItemMD,
+                            },
+                            992: {
+                                items: dataItemLG,
+                            },
+                            1200: {
+                                items: dataItemXL,
+                            },
+                            1680: {
+                                items: dataDefaultItem,
+                            },
+                        },
+                    });
+                } else if (itemCount === 1) {
+                    // Special handling for single item
+                    el.addClass('owl-carousel single-item-carousel').owlCarousel({
+                        rtl: isRTL,
+                        items: 1,
+                        dots: false,
+                        nav: false,
+                        loop: false,
+                        mouseDrag: false,
+                        touchDrag: false,
+                        responsive: {
+                            0: {
+                                items: 1,
+                            },
+                            480: {
+                                items: 1,
+                            },
+                            768: {
+                                items: 1,
+                            },
+                            992: {
+                                items: 1,
+                            },
+                            1200: {
+                                items: 1,
+                            },
+                            1680: {
+                                items: 1,
+                            },
+                        }
+                    });
+                }
+            });
+        }
+    }
+
     $(function () {
         backgroundImage();
         owlCarouselConfig();
+        sliderMainConfig();
         siteToggleAction();
         subMenuToggle();
         productFilterToggle();
@@ -876,10 +1160,89 @@
         reviewList()
     });
 
-    $('[data-toggle="tooltip"]').tooltip();
+    // Bootstrap 5 tooltip initialization
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 
     $('#product-quickview').on('shown.bs.modal', function () {
         $('.ps-product--quickview .ps-product__images').slick('setPosition');
+    });
+
+    // Quick Shop event handlers
+    document.addEventListener('ecommerce.quick-shop.before-send', function (e) {
+        const { element, modal } = e.detail;
+        element.addClass('loading');
+        modal.find('.modal-body').html('<div class="ps-loading"><div class="ps-loading__spinner"></div></div>');
+        
+        // Mark modal to prevent URL updates
+        modal.addClass('quick-shop-no-url-update');
+    });
+
+    document.addEventListener('ecommerce.quick-shop.completed', function (e) {
+        const { element, modal } = e.detail;
+        element.removeClass('loading');
+        
+        // Initialize quantity buttons - using the same logic as product detail page
+        $(modal).find('.product__qty .up').on('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            let currentVal = parseInt($(this).closest('.product__qty').find('.qty-input').val(), 10) || 0;
+            $(this).closest('.product__qty').find('.qty-input').val(currentVal + 1).prop('placeholder', currentVal + 1).trigger('change');
+        });
+        
+        $(modal).find('.product__qty .down').on('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            let currentVal = parseInt($(this).closest('.product__qty').find('.qty-input').val(), 10) || 1;
+            if (currentVal > 1) {
+                $(this).closest('.product__qty').find('.qty-input').val(currentVal - 1).prop('placeholder', currentVal - 1).trigger('change');
+            }
+        });
+        
+        // Handle modal close button (Bootstrap 5)
+        $(modal).find('.modal-close').on('click', function(e) {
+            e.preventDefault();
+            const bsModal = bootstrap.Modal.getInstance(modal[0]);
+            if (bsModal) {
+                bsModal.hide();
+            }
+        });
+        
+        // Prevent URL updates when selecting attributes in quick shop modal
+        $(modal).find('[data-bb-toggle="product-form"]').attr('data-update-url', 'false');
+        
+        // Override window.history methods temporarily for quick shop modal
+        const originalPushState = window.history.pushState;
+        const originalReplaceState = window.history.replaceState;
+        
+        // Create a flag to track if we're in quick shop context
+        $(modal).find('.product-attributes').attr('data-no-url-update', 'true');
+        
+        // Override the methods
+        window.history.pushState = function() {
+            // Check if the call is coming from within quick shop modal
+            const isQuickShop = $('.product-attributes[data-no-url-update="true"]').length > 0;
+            if (!isQuickShop) {
+                return originalPushState.apply(window.history, arguments);
+            }
+            // Do nothing if in quick shop modal
+        };
+        
+        window.history.replaceState = function() {
+            // Check if the call is coming from within quick shop modal
+            const isQuickShop = $('.product-attributes[data-no-url-update="true"]').length > 0;
+            if (!isQuickShop) {
+                return originalReplaceState.apply(window.history, arguments);
+            }
+            // Do nothing if in quick shop modal
+        };
+        
+        // Restore original methods when modal is hidden
+        $(modal).on('hidden.bs.modal', function() {
+            window.history.pushState = originalPushState;
+            window.history.replaceState = originalReplaceState;
+            $(modal).find('.product-attributes').removeAttr('data-no-url-update');
+        });
     });
 
     $(window).on('load', function () {
@@ -908,23 +1271,6 @@
         collapseBreadcrumb();
     });
 
-    let initMegaMenu = function () {
-        setTimeout(function () {
-            const $megaMenu = $(document).find('.mega-menu-wrapper')
-
-            if (! $megaMenu.length) {
-                return
-            }
-
-            if ($(window).width() > 1200 && typeof $.fn.masonry !== 'undefined') {
-                $megaMenu.masonry({
-                    itemSelector: '.mega-menu__column',
-                    columnWidth: 200
-                })
-            }
-        }, 500)
-    }
-
     $(document).ready(function() {
         initMegaMenu()
     })
@@ -932,4 +1278,183 @@
     document.addEventListener('ecommerce.categories-dropdown.success', () => {
         initMegaMenu()
     })
+    
+    // Destroy existing carousel instances in a container
+    function destroyOwlCarousel(container) {
+        let target = container ? $(container).find('.owl-carousel') : $('.owl-carousel');
+        target.each(function() {
+            let el = $(this);
+            if (el.data('owl.carousel')) {
+                el.trigger('destroy.owl.carousel');
+                el.removeClass('owl-carousel owl-loaded');
+                el.find('.owl-stage-outer').children().unwrap();
+            }
+        });
+    }
+    
+    // Reinitialize sliders for shortcodes
+    function reinitializeShortcodeSliders(container) {
+        // Use setTimeout to ensure DOM is fully ready
+        setTimeout(function() {
+            // First destroy any existing carousels to avoid conflicts
+            destroyOwlCarousel(container);
+            
+            // Then initialize Owl Carousel sliders
+            setTimeout(function() {
+                initOwlCarousel(container);
+            }, 50);
+            
+            // Initialize tab functionality for product collections
+            if ($(container).find('.ps-tab-list').length > 0) {
+                // Initialize the tab list as owl carousel if it has the class
+                if ($(container).find('.ps-tab-list.owl-slider').length > 0) {
+                    setTimeout(function() {
+                        initOwlCarousel($(container).find('.ps-tab-list').parent());
+                    }, 100);
+                }
+                
+                // Re-attach tab click handlers
+                $(container).find('.ps-tab-list li a').off('click').on('click', function (e) {
+                    e.preventDefault();
+                    let target = $(this).attr('href');
+                    $(this).closest('li').addClass('active');
+                    $(this).closest('li').siblings('li').removeClass('active');
+                    $(target).addClass('active');
+                    $(target).siblings('.ps-tab').removeClass('active');
+                    
+                    // Destroy and reinitialize carousel in the activated tab
+                    setTimeout(function() {
+                        destroyOwlCarousel(target);
+                        setTimeout(function() {
+                            initOwlCarousel(target);
+                        }, 50);
+                    }, 100);
+                });
+                
+                // Initialize carousel in the first active tab
+                let activeTab = $(container).find('.ps-tab.active');
+                if (activeTab.length > 0) {
+                    setTimeout(function() {
+                        initOwlCarousel(activeTab);
+                    }, 150);
+                }
+            }
+            
+            // Reinitialize carousel navigation buttons
+            if ($(container).find('.ps-carousel__prev, .ps-carousel__next').length > 0) {
+                $(container).find('.ps-carousel__prev').off('click').on('click', function (e) {
+                    e.preventDefault();
+                    let target = $(this).attr('href');
+                    $(target).trigger('prev.owl.carousel', [1000]);
+                });
+                
+                $(container).find('.ps-carousel__next').off('click').on('click', function (e) {
+                    e.preventDefault();
+                    let target = $(this).attr('href');
+                    $(target).trigger('next.owl.carousel', [1000]);
+                });
+            }
+        }, 200);
+    }
+    
+    // Use MutationObserver to watch for dynamically added content
+    var observeDOM = (function(){
+        var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+        
+        return function(obj, callback){
+            if (!obj || obj.nodeType !== 1) return;
+            
+            if (MutationObserver){
+                var mutationObserver = new MutationObserver(callback);
+                mutationObserver.observe(obj, { childList: true, subtree: true });
+                return mutationObserver;
+            }
+            else if (window.addEventListener){
+                obj.addEventListener('DOMNodeInserted', callback, false);
+                obj.addEventListener('DOMNodeRemoved', callback, false);
+            }
+        }
+    })();
+    
+    // Watch for DOM changes and initialize sliders
+    observeDOM(document.body, function(mutations) {
+        var hasOwlSlider = false;
+        
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        if ($(node).hasClass('owl-slider') || $(node).find('.owl-slider').length > 0) {
+                            hasOwlSlider = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (hasOwlSlider) {
+            setTimeout(function() {
+                initOwlCarousel();
+            }, 100);
+        }
+    });
+    
+    // Listen for shortcode loaded event
+    document.addEventListener('shortcode.loaded', function (event) {
+        setTimeout(function() {
+            initOwlCarousel();
+            backgroundImage();
+            
+            // Re-initialize other components that might be needed
+            tabs();
+            rating();
+            select2Config();
+            countDown();
+            productFilterToggle();
+            
+            // Initialize tooltips for new content
+            // Bootstrap 5 tooltip initialization
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+        }, 100);
+    });
+    
+    // Listen for AJAX content loaded
+    $(document).on('ajaxContentLoaded', function(event, container) {
+        if (container) {
+            initOwlCarousel(container);
+        }
+    });
+    
+    // Listen for tab shown event to reinitialize carousels in tabs
+    $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function() {
+        const tabPane = $($(this).attr('href'));
+        if (tabPane.length) {
+            setTimeout(function() {
+                initOwlCarousel(tabPane);
+            }, 100);
+        }
+    });
+    
+    // Handle product collection tab clicks
+    $(document).on('click', '.product-collections-tab .nav-tabs .nav-link:not([data-loaded])', function (e) {
+        e.preventDefault();
+        const $this = $(e.currentTarget);
+        const tabPanel = $this.closest('.product-collections-tab').find('#' + $this.data('ref'));
+        const $template = $this.closest('.product-collections-tab').find('.product-collection-items').html();
+        
+        $.ajax({
+            url: $this.data('url'),
+            dataType: 'json',
+            success: (res) => {
+                if (res.error == false) {
+                    tabPanel.html($template.replace('__data__', res.data?.reduce((html, item) => html + '<div class="item">' + item + '</div>', '')));
+                    setTimeout(function() {
+                        initOwlCarousel(tabPanel);
+                    }, 100);
+                    $this.attr('data-loaded', 1);
+                }
+            }
+        });
+    });
 })(jQuery);

@@ -4,7 +4,7 @@
     <x-core::modal
         id="add-address-modal"
         :title="trans('plugins/ecommerce::addresses.add_address')"
-        :form-action="route('customers.addresses.create.store')"
+        :form-action="route('customers.addresses.store')"
         form-method="POST"
         size="md"
     >

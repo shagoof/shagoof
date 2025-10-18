@@ -1,8 +1,9 @@
 <?php
 
+use Botble\Theme\Events\RenderingThemeOptionSettings;
 use Botble\Theme\ThemeOption\Fields\MediaImageField;
 
-app()->booted(function (): void {
+app('events')->listen(RenderingThemeOptionSettings::class, function (): void {
     theme_option()
         ->setSection([
             'title' => __('Style'),
@@ -228,21 +229,41 @@ app()->booted(function (): void {
                 ],
             ],
         ])
-        ->setField([
-            'id' => 'sell_on_site_text',
-            'section_id' => 'opt-text-subsection-general',
-            'type' => 'text',
-            'label' => __('Sell on site text (default: Sell on Martfury)'),
-            'attributes' => [
-                'name' => 'sell_on_site_text',
-                'value' => null,
-                'options' => [
-                    'class' => 'form-control',
-                    'placeholder' => __('Sell on site text'),
-                    'data-counter' => 120,
-                ],
-            ],
-        ])
+        ->when(is_plugin_active('marketplace'), function (): void {
+            theme_option()
+                ->setField([
+                    'id' => 'show_sell_on_marketplace_link',
+                    'section_id' => 'opt-text-subsection-general',
+                    'type' => 'customSelect',
+                    'label' => __('Show "Sell on Marketplace" link?'),
+                    'attributes' => [
+                        'name' => 'show_sell_on_marketplace_link',
+                        'list' => [
+                            'yes' => trans('core/base::base.yes'),
+                            'no' => trans('core/base::base.no'),
+                        ],
+                        'value' => 'yes',
+                        'options' => [
+                            'class' => 'form-control',
+                        ],
+                    ],
+                ])
+                ->setField([
+                    'id' => 'sell_on_site_text',
+                    'section_id' => 'opt-text-subsection-general',
+                    'type' => 'text',
+                    'label' => __('Sell on site text (default: Sell on Martfury)'),
+                    'attributes' => [
+                        'name' => 'sell_on_site_text',
+                        'value' => null,
+                        'options' => [
+                            'class' => 'form-control',
+                            'placeholder' => __('Sell on site text'),
+                            'data-counter' => 120,
+                        ],
+                    ],
+                ]);
+        })
         ->setField([
             'id' => 'hotline',
             'section_id' => 'opt-text-subsection-general',
@@ -356,6 +377,44 @@ app()->booted(function (): void {
             'id' => 'opt-text-subsection-product-features',
             'subsection' => true,
             'icon' => 'ti ti-cube',
+        ])
+        ->setSection([
+            'title' => __('Bottom Bar Menu'),
+            'id' => 'opt-text-subsection-bottom-bar-menu',
+            'subsection' => true,
+            'icon' => 'ti ti-category-2',
+        ])
+        ->setField([
+            'id' => 'bottom_bar_menu_show_text',
+            'section_id' => 'opt-text-subsection-bottom-bar-menu',
+            'type' => 'customSelect',
+            'label' => __('Show menu text'),
+            'attributes' => [
+                'name' => 'bottom_bar_menu_show_text',
+                'list' => [
+                    'yes' => trans('core/base::base.yes'),
+                    'no' => trans('core/base::base.no'),
+                ],
+                'value' => 'yes',
+                'options' => [
+                    'class' => 'form-control',
+                ],
+            ],
+        ])
+        ->setField([
+            'id' => 'bottom_bar_menu_text_font_size',
+            'section_id' => 'opt-text-subsection-bottom-bar-menu',
+            'type' => 'number',
+            'label' => __('Menu text font size (px)'),
+            'attributes' => [
+                'name' => 'bottom_bar_menu_text_font_size',
+                'value' => 14,
+                'options' => [
+                    'class' => 'form-control',
+                    'min' => 8,
+                    'max' => 20,
+                ],
+            ],
         ])
         ->setSection([
             'title' => __('Contact info boxes'),

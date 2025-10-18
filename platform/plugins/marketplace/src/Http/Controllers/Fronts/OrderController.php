@@ -22,6 +22,7 @@ use Botble\Marketplace\Tables\OrderTable;
 use Botble\Payment\Models\Payment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends BaseController
 {
@@ -157,7 +158,7 @@ class OrderController extends BaseController
         $address = OrderAddress::query()
             ->where('id', $id)
             ->whereHas('order', function ($query): void {
-                $query->where('store_id', auth('customer')->user()->store->id);
+                $query->where('store_id', auth('customer')->user()->store?->id);
             })
             ->first();
 
@@ -213,13 +214,29 @@ class OrderController extends BaseController
             ->setMessage(trans('plugins/ecommerce::order.customer.messages.cancel_success'));
     }
 
+    public function downloadProof(Order $order)
+    {
+        abort_unless($order->store_id === auth('customer')->user()->store?->id, 403);
+
+        $storage = Storage::disk('local');
+
+        if (! $storage->exists($order->proof_file)) {
+            return $this
+                ->httpResponse()
+                ->setError()
+                ->setMessage(__('File not found!'));
+        }
+
+        return $storage->download($order->proof_file);
+    }
+
     protected function findOrFail(int|string $id): Order|Model|null
     {
         return Order::query()
             ->where([
                 'id' => $id,
                 'is_finished' => 1,
-                'store_id' => auth('customer')->user()->store->id,
+                'store_id' => auth('customer')->user()->store?->id,
             ])
             ->firstOrFail();
     }

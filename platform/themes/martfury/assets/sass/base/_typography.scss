@@ -4,7 +4,7 @@
 }
 
 html {
-    font-size: 62.5%;
+    // Removed font-size: 62.5% to use standard 1rem = 16px
 }
 
 body {
@@ -53,7 +53,7 @@ h6 {
 }
 
 p {
-    font-size: 1.4rem;
+    font-size: 0.875rem; // Was 1.4rem (14px with 62.5%), now 14px/16px = 0.875rem
     line-height: 1.6em;
     color: $color-text;
 
@@ -106,12 +106,6 @@ img {
     max-width: 100%;
 }
 
-iframe {
-    border: 0;
-    max-width: 100%;
-    width: 100%;
-}
-
 figure {
     margin: 0;
 }
@@ -138,7 +132,7 @@ figure {
         font-weight: 600;
     }
     p {
-        margin-bottom: 4rem;
+        margin-bottom: 2.5rem; // Was 4rem (40px), now 40px/16px = 2.5rem
         line-height: 1.8em;
         color: $color-text;
 
@@ -159,9 +153,9 @@ figure {
 
     blockquote {
         position: relative;
-        margin-bottom: 3rem;
-        padding: 3rem 2rem;
-        padding-left: 6rem;
+        margin-bottom: 1.875rem; // Was 3rem (30px), now 30px/16px = 1.875rem
+        padding: 1.875rem 1.25rem; // Was 3rem 2rem (30px 20px), now 30px/16px 20px/16px
+        padding-left: 3.75rem; // Was 6rem (60px), now 60px/16px = 3.75rem
         background-color: #f1f1f1;
         &:before {
             content: '“';
@@ -169,7 +163,7 @@ figure {
             top: 10px;
             left: 30px;
             font-family: $font-2nd;
-            font-size: 5rem;
+            font-size: 3.125rem; // Was 5rem (50px), now 50px/16px = 3.125rem
             color: $color-text;
         }
 
@@ -192,7 +186,7 @@ figure {
 
         h4 {
             display: inline-block;
-            padding: 0 3rem;
+            padding: 0 1.875rem; // Was 3rem (30px), now 30px/16px = 1.875rem
             margin-bottom: 0;
             text-align: center;
             font-weight: 600;
@@ -221,16 +215,16 @@ figure {
 }
 
 .ps-heading {
-    margin-bottom: 1.5rem;
-    font-size: 3.6rem;
+    margin-bottom: 0.9375rem; // Was 1.5rem (15px), now 15px/16px = 0.9375rem
+    font-size: 2.25rem; // Was 3.6rem (36px), now 36px/16px = 2.25rem
     color: $color-heading;
     font-weight: 600;
     line-height: 1.4em;
     &--2 {
-        font-size: 2.4rem;
+        font-size: 1.5rem; // Was 2.4rem (24px), now 24px/16px = 1.5rem
     }
     @include media('<sm') {
-        font-size: 2.4rem;
+        font-size: 1.5rem; // Was 2.4rem (24px), now 24px/16px = 1.5rem
     }
 }
 

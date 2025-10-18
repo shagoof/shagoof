@@ -63,6 +63,6 @@ class TaxRateCalculatorService
             $taxRate = Tax::query()->where('id', $defaultTaxRate)->value('percentage');
         }
 
-        return $taxRate;
+        return (float) $taxRate;
     }
 }

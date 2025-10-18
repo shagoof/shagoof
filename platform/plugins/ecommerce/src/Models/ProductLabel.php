@@ -32,7 +32,7 @@ class ProductLabel extends BaseModel
 
     protected static function booted(): void
     {
-        static::deleted(function (ProductLabel $label) {
+        static::deleted(function (ProductLabel $label): void {
             $label->products()->detach();
         });
     }

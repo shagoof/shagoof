@@ -20,7 +20,10 @@
     >
 
     @if ($favicon = theme_option('favicon'))
-        {{ Html::favicon(RvMedia::getImageUrl($favicon)) }}
+        {{ Html::favicon(
+            RvMedia::getImageUrl($favicon),
+            ['type' => rescue(fn () => RvMedia::getMimeType($favicon), 'image/x-icon')]
+        ) }}
     @endif
 
     <meta
@@ -41,6 +44,7 @@
 
     <script>
         window.siteUrl = "{{ BaseHelper::getHomepageUrl() }}";
+        window.siteEditorLocale = "{{ apply_filters('cms_site_editor_locale', App::getLocale()) }}";
     </script>
 
     <script type="text/javascript">
@@ -119,7 +123,6 @@
 
 @stack('scripts')
 @stack('footer')
-{!! apply_filters(THEME_FRONT_FOOTER, null) !!}
 </body>
 
 </html>

@@ -23,7 +23,7 @@ class AdsManager
         ];
     }
 
-    public function display(string $location, array $attributes = []): string
+    public function display(string $location, array $attributes = [], bool $single = true): string
     {
         $this->load();
 
@@ -32,7 +32,7 @@ class AdsManager
             ->where('location', $location)
             ->sortBy('order');
 
-        if ($data->isNotEmpty()) {
+        if ($data->isNotEmpty() && $single) {
             $data = $data->random(1);
         }
 
@@ -53,6 +53,14 @@ class AdsManager
 
     protected function read(array $with): Collection
     {
+        $defaultWith = ['metadata'];
+
+        if (! empty($with)) {
+            $with = array_merge($defaultWith, $with);
+        } else {
+            $with = $defaultWith;
+        }
+
         return Ads::query()->with($with)->get();
     }
 

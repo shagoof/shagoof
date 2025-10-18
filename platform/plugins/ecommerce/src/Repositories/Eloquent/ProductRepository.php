@@ -333,6 +333,7 @@ class ProductRepository extends RepositoriesAbstract implements ProductInterface
             'attributes' => [],
             'collections' => [],
             'collection' => null,
+            'discounted_only' => false,
         ], $filters);
 
         $isUsingDefaultCurrency = get_application_currency_id() == cms_currency()->getDefaultCurrency()->getKey();
@@ -380,6 +381,14 @@ class ProductRepository extends RepositoriesAbstract implements ProductInterface
             'with' => [],
             'withCount' => [],
         ], $params);
+
+        $params['select'] = [
+            ...$params['select'],
+            'ec_products.with_storehouse_management',
+            'ec_products.stock_status',
+            'ec_products.quantity',
+            'ec_products.allow_checkout_when_out_of_stock',
+        ];
 
         $params['with'] = array_merge(EcommerceHelper::withProductEagerLoadingRelations(), $params['with']);
 
@@ -440,6 +449,16 @@ class ProductRepository extends RepositoriesAbstract implements ProductInterface
             '), function ($join) {
                 return $join->on('products_with_final_price.id', '=', 'ec_products.id');
             });
+
+        // Add custom order for out-of-stock products
+        $this->model = $this->model->orderByRaw('
+                CASE
+                    WHEN ec_products.with_storehouse_management = 0 THEN
+                        CASE WHEN ec_products.stock_status = ? THEN 1 ELSE 0 END
+                    ELSE
+                        CASE WHEN ec_products.quantity <= 0 AND ec_products.allow_checkout_when_out_of_stock = 0 THEN 1 ELSE 0 END
+                END ASC
+            ', [StockStatusEnum::OUT_OF_STOCK]);
 
         if ($keyword = $filters['keyword']) {
             $searchProductsBy = EcommerceHelper::getProductsSearchBy();
@@ -715,6 +734,28 @@ class ProductRepository extends RepositoriesAbstract implements ProductInterface
 
         if (! Arr::get($params, 'include_out_of_stock_products')) {
             $this->exceptOutOfStockProducts();
+        }
+
+        // Filter products that are on sale when discounted_only is set to true
+        if ($filters['discounted_only']) {
+            $this->model = $this->model->where(function ($query): void {
+                $query->where(function ($subQuery): void {
+                    // Products with sale price
+                    $subQuery->where('sale_type', 0)
+                        ->where('sale_price', '>', 0)
+                        ->whereColumn('sale_price', '<', 'price');
+                })->orWhere(function ($subQuery): void {
+                    // Products with time-based sale
+                    $now = Carbon::now();
+                    $subQuery->where('sale_type', 1)
+                        ->where('start_date', '<=', $now)
+                        ->where(function ($q) use ($now): void {
+                            $q->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $now);
+                        })
+                        ->whereColumn('sale_price', '<', 'price');
+                });
+            });
         }
 
         $this->model = apply_filters('ecommerce_products_filter', $this->model, $filters, $params);

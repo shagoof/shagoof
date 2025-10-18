@@ -988,7 +988,7 @@
     }
 
     @media (max-width: 1680px) {
-        .owl-slider {
+        .owl-slider, .owl-main-slider {
             .owl-nav {
                 .owl-prev {
                     margin-left: -30px;
@@ -3182,7 +3182,7 @@
             color: #ffffff;
 
             i {
-                margin-right: 1rem;
+                margin-right: 0.625rem; // Was 1rem (10px), now 10px/16px
                 color: #999999;
             }
         }

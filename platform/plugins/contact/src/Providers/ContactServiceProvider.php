@@ -20,7 +20,6 @@ use Botble\Contact\Repositories\Interfaces\ContactReplyInterface;
 use Botble\LanguageAdvanced\Supports\LanguageAdvancedManager;
 use Botble\Setting\PanelSections\SettingOthersPanelSection;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Events\RouteMatched;
 
 class ContactServiceProvider extends ServiceProvider
 {
@@ -42,7 +41,8 @@ class ContactServiceProvider extends ServiceProvider
         $this
             ->setNamespace('plugins/contact')
             ->loadHelpers()
-            ->loadAndPublishConfigurations(['permissions', 'email'])
+            ->loadAndPublishConfigurations(['email'])
+            ->loadAndPublishConfigurations(['permissions'])
             ->loadRoutes()
             ->loadAndPublishViews()
             ->loadAndPublishTranslations()
@@ -91,11 +91,9 @@ class ContactServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app['events']->listen(RouteMatched::class, function (): void {
-            EmailHandler::addTemplateSettings(CONTACT_MODULE_SCREEN_NAME, config('plugins.contact.email', []));
-        });
-
         $this->app->booted(function (): void {
+            EmailHandler::addTemplateSettings(CONTACT_MODULE_SCREEN_NAME, config('plugins.contact.email', []));
+
             $this->app->register(HookServiceProvider::class);
         });
 

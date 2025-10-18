@@ -521,3 +521,42 @@
     }
 }
 
+// Bottom Bar Menu Styles
+.navigation--list {
+    .navigation__content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .navigation__item {
+        flex: 1;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        min-width: 0; // Allow flex items to shrink below content width
+        
+        span {
+            font-size: var(--bottom-bar-menu-text-font-size, 14px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            width: 100%;
+        }
+    }
+
+    &[data-hide-text="true"] {
+        .navigation__item {
+            padding-top: 8px;
+            padding-bottom: 8px;
+            
+            span {
+                display: none;
+            }
+        }
+    }
+}
+

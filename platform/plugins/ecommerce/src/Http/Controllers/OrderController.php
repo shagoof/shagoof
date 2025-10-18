@@ -160,13 +160,15 @@ class OrderController extends BaseController
                 'user_id' => $userId,
             ]);
 
-            $createPaymentForOrderService->execute(
-                $order,
-                $request->input('payment_method'),
-                $paymentStatus,
-                $customerId,
-                $request->input('transaction_id')
-            );
+            if (is_plugin_active('payment')) {
+                $createPaymentForOrderService->execute(
+                    $order,
+                    $request->input('payment_method'),
+                    $paymentStatus,
+                    $customerId,
+                    $request->input('transaction_id')
+                );
+            }
 
             if ($request->input('customer_address.name')) {
                 OrderAddress::query()->create([
@@ -218,21 +220,19 @@ class OrderController extends BaseController
                     continue;
                 }
 
-                $ids = [$product->getKey()];
-                if ($product->is_variation && $product->original_product) {
-                    $ids[] = $product->original_product->id;
+                // Only decrease quantity if storehouse management is enabled and sufficient stock
+                if ($product->with_storehouse_management && $product->quantity >= $quantity) {
+                    $product->quantity -= $quantity;
+                    $product->save();
+
+                    // Trigger event to update parent product if this is a variation
+                    event(new ProductQuantityUpdatedEvent($product));
                 }
-
-                Product::query()
-                    ->whereIn('id', $ids)
-                    ->where('with_storehouse_management', 1)
-                    ->where('quantity', '>=', $quantity)
-                    ->decrement('quantity', $quantity);
-
-                event(new ProductQuantityUpdatedEvent($product));
             }
 
             event(new OrderCreated($order));
+
+            OrderHelper::sendOrderConfirmationEmail($order, true);
         }
 
         if (Arr::get($data, 'is_available_shipping')) {
@@ -343,7 +343,7 @@ class OrderController extends BaseController
 
     public function postResendOrderConfirmationEmail(Order $order)
     {
-        $result = OrderHelper::sendOrderConfirmationEmail($order);
+        $result = OrderHelper::sendOrderConfirmationEmail($order, false, true);
 
         if (! $result) {
             return $this
@@ -402,6 +402,10 @@ class OrderController extends BaseController
     public function postCreateShipment(Order $order, CreateShipmentRequest $request)
     {
         $result = $this->httpResponse();
+
+        if (Shipment::query()->where(['order_id' => $order->getKey()])->exists()) {
+            return $result->setMessage(trans('plugins/ecommerce::order.order_was_sent_to_shipping_team'));
+        }
 
         $shipment = [
             'order_id' => $order->getKey(),
@@ -494,10 +498,10 @@ class OrderController extends BaseController
     public function postUpdateTaxInformation(OrderTaxInformation $taxInformation, Request $request)
     {
         $validated = $request->validate([
-            'company_tax_code' => 'required|string|min:3|max:20',
-            'company_name' => 'required|string|min:3|max:120',
-            'company_address' => 'required|string|min:3|max:255',
-            'company_email' => 'required|email|min:6|max:60',
+            'company_tax_code' => ['required', 'string', 'min:3', 'max:20'],
+            'company_name' => ['required', 'string', 'min:3', 'max:120'],
+            'company_address' => ['required', 'string', 'min:3', 'max:255'],
+            'company_email' => ['required', 'email', 'min:6', 'max:60'],
         ]);
 
         $taxInformation->load(['order']);

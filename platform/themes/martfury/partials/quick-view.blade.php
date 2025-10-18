@@ -1,6 +1,6 @@
 <div class="ps-product__header">
     <div class="ps-product__thumbnail" data-vertical="false">
-        <div class="ps-product__images" data-arrow="true">
+        <div class="bb-quick-view-gallery-images" data-arrow="true">
             @foreach ($productImages as $img)
                 <div class="item"><img src="{{ RvMedia::getImageUrl($img) }}" alt="{{ $product->name }}"></div>
             @endforeach
@@ -31,7 +31,7 @@
                 {!! apply_filters('ecommerce_after_product_description', null, $product) !!}
             </div>
         </div>
-        @if ($product->variations()->count() > 0)
+        @if ($product->has_variation)
             <div class="pr_switch_wrap">
                 {!! render_product_swatches($product, [
                     'selected' => $selectedAttrs,

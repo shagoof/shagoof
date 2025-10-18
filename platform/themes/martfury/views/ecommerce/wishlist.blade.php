@@ -10,8 +10,8 @@
                         <thead>
                         <tr>
                             <th></th>
-                            <th class="text-left">{{ __('Image') }}</th>
-                            <th class="text-left">{{ __('Price') }}</th>
+                            <th class="text-start">{{ __('Image') }}</th>
+                            <th class="text-start">{{ __('Price') }}</th>
                             <th></th>
                         </tr>
                         </thead>

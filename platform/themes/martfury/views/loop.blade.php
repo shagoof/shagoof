@@ -15,7 +15,7 @@
                     <a class="ps-post__title" href="{{ $post->url }}">{!! BaseHelper::clean($post->name) !!}</a>
                 </div>
                 <div class="ps-post__bottom">
-                    <p>{{ $post->created_at->translatedFormat('M d, Y') }} @if ($post->author) {{ __('by') }} {{ $post->author->name }} @endif</p>
+                    <p>{{ Theme::formatDate($post->created_at) }} @if ($post->author) {{ __('by') }} {{ $post->author->name }} @endif</p>
                 </div>
             </div>
         </div>
@@ -42,7 +42,7 @@
                                 <a class="ps-post__title" href="{{ $post->url }}">{!! BaseHelper::clean($post->name) !!}</a>
                             </div>
                             <div class="ps-post__bottom">
-                                <p>{{ $post->created_at->translatedFormat('M d, Y') }} @if ($post->author) {{ __('by') }} {{ $post->author->name }} @endif</p>
+                                <p>{{ Theme::formatDate($post->created_at) }} @if ($post->author) {{ __('by') }} {{ $post->author->name }} @endif</p>
                             </div>
                         </div>
                     </div>

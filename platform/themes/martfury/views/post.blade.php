@@ -4,7 +4,7 @@
 
 <div class="ps-post--detail sidebar">
     <div class="ps-post__header">
-        <p>{{ $post->created_at->translatedFormat('M d, Y') }} @if ($post->author) / {{ __('By') }} {{ $post->author->name }} @endif / {{ __('in') }} @foreach($post->categories as $category) <a href="{{ $category->url }}">{!! BaseHelper::clean($category->name) !!}</a> @endforeach</p>
+        <p>{{ Theme::formatDate($post->created_at) }} @if ($post->author) / {{ __('By') }} {{ $post->author->name }} @endif / {{ __('in') }} @foreach($post->categories as $category) <a href="{{ $category->url }}">{!! BaseHelper::clean($category->name) !!}</a> @endforeach</p>
     </div>
     <div class="ps-post__content" style="padding-top: 0;">
         <div class="ck-content">{!! BaseHelper::clean($post->content) !!}</div>
@@ -19,10 +19,10 @@
                 @endforeach
             </p>
         @endif
-        <div class="ps-post__social">
-            <a class="facebook" href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode($post->url) }}&title={{ $post->description }}" target="_blank"><i class="fa fa-facebook"></i></a>
-            <a class="linkedin" href="https://www.linkedin.com/shareArticle?mini=true&url={{ urlencode($post->url) }}&summary={{ rawurldecode($post->description) }}" target="_blank"><i class="fa fa-twitter"></i></a>
-            <a class="twitter" href="https://twitter.com/intent/tweet?url={{ urlencode($post->url) }}&text={{ $post->description }}" target="_blank"><i class="fa fa-linkedin"></i></a>
+        <div class="ps-post__sharing">
+            <span>{{ __('Share:') }}</span>
+
+            {!! Theme::renderSocialSharing($post->url, SeoHelper::getDescription(), $post->image) !!}
         </div>
     </div>
     @php $relatedPosts = get_related_posts($post->id, 2); @endphp
@@ -48,7 +48,7 @@
                                     <a class="ps-post__title" href="{{ $post->url }}">{!! BaseHelper::clean($post->name) !!}</a>
                                 </div>
                                 <div class="ps-post__bottom">
-                                    <p>{{ $post->created_at->translatedFormat('M d, Y') }} @if ($post->author) {{ __('by') }} {{ $post->author->name }} @endif</p>
+                                    <p>{{ Theme::formatDate($post->created_at) }} @if ($post->author) {{ __('by') }} {{ $post->author->name }} @endif</p>
                                 </div>
                             </div>
                         </div>

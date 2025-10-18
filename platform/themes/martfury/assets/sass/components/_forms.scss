@@ -264,37 +264,6 @@
     }
 }
 
-.ps-form--order-tracking {
-    max-width: 630px;
-    margin: 0 auto 50px;
-
-    .form-group {
-        margin-bottom: 30px;
-
-        > label {
-            font-size: 18px;
-            font-weight: 600;
-            color: $color-heading;
-        }
-
-        input {
-            border-color: #bfbfbf;
-            @include placeholder() {
-                color: #a9a9a9;
-            }
-        }
-    }
-
-    @include media('<md') {
-        .form-group {
-            > label {
-                font-size: 16px;
-                font-weight: 500;
-            }
-        }
-    }
-}
-
 .ps-form--search-mobile {
     input {
         height: 40px;

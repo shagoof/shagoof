@@ -1,5 +1,5 @@
 <div class="ps-product__thumbnail">
-    <a href="{{ $product->url }}">
+    <a href="{{ $product->url }}" title="{{ $product->name }}">
         {!! RvMedia::image($product->image, $product->name, 'small') !!}
     </a>
     @if ($product->isOutOfStock())
@@ -23,7 +23,11 @@
     @endif
     <ul class="ps-product__actions">
         @if (EcommerceHelper::isCartEnabled())
-            <li><a class="add-to-cart-button" data-id="{{ $product->id }}" href="#" data-url="{{ route('public.cart.add-to-cart') }}" {!! EcommerceHelper::jsAttributes('add-to-cart', $product, additional: ['data-bb-toggle' => 'none']) !!} title="{{ __('Add To Cart') }}"><i class="icon-bag2"></i></a></li>
+            @if ($product->has_variation)
+                <li><a href="#" data-bb-toggle="quick-shop" data-url="{{ route('public.ajax.quick-shop', $product->slug) }}" {!! EcommerceHelper::jsAttributes('quick-shop', $product) !!} title="{{ __('Select Options') }}"><i class="icon-bag2"></i></a></li>
+            @else
+                <li><a class="add-to-cart-button" data-id="{{ $product->id }}" href="#" data-url="{{ route('public.cart.add-to-cart') }}" {!! EcommerceHelper::jsAttributes('add-to-cart', $product, additional: ['data-bb-toggle' => 'none']) !!} title="{{ __('Add To Cart') }}"><i class="icon-bag2"></i></a></li>
+            @endif
         @endif
         <li><a href="#" data-url="{{ route('public.ajax.quick-view', $product->id) }}" title="{{ __('Quick View') }}" class="js-quick-view-button"><i class="icon-eye"></i></a></li>
         @if (EcommerceHelper::isWishlistEnabled())
@@ -42,10 +46,10 @@
         @if (is_plugin_active('marketplace') && $product->store->id)
             <p class="ps-product__vendor">
                 <span>{{ __('Sold by') }}: </span>
-                <a href="{{ $product->store->url }}" class="text-uppercase">{{ $product->store->name }}</a>
+                <a href="{{ $product->store->url }}" class="text-uppercase" title="{{ __('Visit store') }}: {{ $product->store->name }}">{{ $product->store->name }} {!! $product->store->badge !!}</a>
             </p>
         @endif
-        <a class="ps-product__title" href="{{ $product->url }}">{!! BaseHelper::clean($product->name) !!}</a>
+        <a class="ps-product__title" href="{{ $product->url }}" title="{{ $product->name }}">{!! BaseHelper::clean($product->name) !!}</a>
         @if (EcommerceHelper::isReviewEnabled())
             <div class="rating_wrap">
                 <div class="rating">

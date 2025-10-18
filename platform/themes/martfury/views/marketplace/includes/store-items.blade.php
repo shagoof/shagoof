@@ -4,7 +4,10 @@
             <article class="ps-block--store-2">
                 <div class="ps-block__content bg--cover" data-background="{{ asset('vendor/core/plugins/marketplace/img/default-store-banner.png') }}">
                     <figure>
-                        <h4>{{ $store->name }}</h4>
+                        <h4>
+			     {{ $store->name }}
+                             {!! $store->badge !!}
+                        </h4>
                         @if (EcommerceHelper::isReviewEnabled())
                             <div class="rating_wrap">
                                 <div class="rating">
@@ -17,7 +20,7 @@
                             <p>{{ $store->full_address }}</p>
                         @endif
                         @if (!MarketplaceHelper::hideStorePhoneNumber() && $store->phone)
-                            <p><i class="icon-telephone"></i>&nbsp;{{ $store->phone }}</p>
+                            <p><i class="icon-telephone"></i><span>&nbsp;{{ $store->phone }}</span></p>
                         @endif
                         @if (!MarketplaceHelper::hideStoreEmail() && $store->email)
                             <p><i class="icon-envelope"></i>&nbsp;<a href="mailto:{{ $store->email }}">{{ $store->email }}</a></p>

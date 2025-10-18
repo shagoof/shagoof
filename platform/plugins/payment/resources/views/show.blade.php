@@ -62,6 +62,13 @@
                                 {{ $payment->amount }} {{ $payment->currency }}
                             </x-core::datagrid.item>
 
+                            @if ($payment->payment_fee > 0)
+                            <x-core::datagrid.item>
+                                <x-slot:title>{{ trans('plugins/payment::payment.payment_fee') }}</x-slot:title>
+                                {{ $payment->payment_fee }} {{ $payment->currency }}
+                            </x-core::datagrid.item>
+                            @endif
+
                             <x-core::datagrid.item>
                                 <x-slot:title>{{ trans('plugins/payment::payment.created_at') }}</x-slot:title>
                                 {{ BaseHelper::formatDateTime($payment->created_at) }}
@@ -76,6 +83,8 @@
                         {!! $detail !!}
                     </x-core::card.body>
                 </x-core::card>
+
+                @include('plugins/payment::partials.payment-logs', ['payment' => $payment])
 
                 @php
                     do_action(BASE_ACTION_META_BOXES, 'advanced', $payment);

@@ -37,12 +37,19 @@ class HookServiceProvider extends ServiceProvider
             ShortcodeFacade::setAdminConfig('contact-form', function (array $attributes) {
                 return ShortcodeContactAdminConfigForm::createFromArray($attributes);
             });
+
+            ShortcodeFacade::ignoreLazyLoading(['contact-form']);
+            ShortcodeFacade::ignoreCaches(['contact-form']);
         }
 
         add_filter('form_extra_fields_render', function (?string $fields = null, ?string $form = null): ?string {
+            if ($form && $form !== ContactForm::class) {
+                return $fields;
+            }
+
             $customFields = CustomField::query()
                 ->wherePublished()->with('options')
-                ->orderBy('order')
+                ->oldest('order')
                 ->get();
 
             if ($customFields->isEmpty()) {

@@ -102,6 +102,19 @@ class HookServiceProvider extends ServiceProvider
         }, 50);
 
         add_filter('core_available_locales', function (array $availableLocales) {
+            if (in_array(
+                Route::currentRouteName(),
+                [
+                    'translations.locales',
+                    'translations.index',
+                    'translations.theme-translations',
+                    'tools.data-synchronize.export.theme-translations.index',
+                    'tools.data-synchronize.export.other-translations.index',
+                ]
+            )) {
+                return $availableLocales;
+            }
+
             $languages = Language::getActiveLanguage(['lang_locale', 'lang_code', 'lang_name', 'lang_flag', 'lang_is_rtl']);
 
             if ($languages->isEmpty()) {

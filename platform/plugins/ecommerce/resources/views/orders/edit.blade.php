@@ -21,6 +21,7 @@
                             <div class="col-md-6 offset-md-6">
                                 @include('plugins/ecommerce::orders.edit.order-info', [
                                     'isInAdmin' => true,
+                                    'proofDownloadUrl' => route('orders.download-proof', $order->id),
                                 ])
 
                                 <div class="btn-list justify-content-end my-3">
@@ -189,7 +190,8 @@
 
                 @include('plugins/ecommerce::orders.partials.digital-product-downloads-info', compact('order'))
 
-                <x-core::card>
+                @if ($order->histories()->exists())
+                    <x-core::card>
                     <x-core::card.header>
                         <x-core::card.title>
                             {{ trans('plugins/ecommerce::order.history') }}
@@ -207,10 +209,10 @@
                                                 data-target="#history-line-{{ $history->id }}"
                                                 href="javascript:void(0)"
                                             >
-                                                {{ OrderHelper::processHistoryVariables($history) }}
+                                                {!! OrderHelper::processHistoryVariables($history) !!}
                                             </a>
                                         @else
-                                            {{ OrderHelper::processHistoryVariables($history) }}
+                                            {!! OrderHelper::processHistoryVariables($history) !!}
                                         @endif
                                     </div>
                                     <div class="text-secondary">{{ BaseHelper::formatDateTime($history->created_at) }}</div>
@@ -386,6 +388,7 @@
                         </ul>
                     </x-core::card.body>
                 </x-core::card>
+                @endif
             </div>
 
             <div class="col-md-3">

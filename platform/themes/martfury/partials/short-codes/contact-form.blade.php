@@ -6,7 +6,7 @@
             $form
                 ->setFormOption('class', 'ps-form--contact-us contact-form')
                 ->setFormInputClass('form-control')
-                ->setFormLabelClass('d-none sr-only')
+                ->setFormLabelClass('d-none visually-hidden')
                 ->modify(
                     'submit',
                     'submit',

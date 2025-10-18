@@ -45,7 +45,7 @@ class CustomerForm extends FormFront
                 'email',
                 EmailField::class,
                 EmailFieldOption::make()
-                    ->disabled()
+                    ->disabled($this->getModel()->email)
             )
             ->add(
                 'phone',

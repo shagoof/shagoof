@@ -7,7 +7,11 @@ use Illuminate\Support\Facades\Schema;
 return new class () extends Migration {
     public function up(): void
     {
-        Schema::create('ec_taxes_translations', function (Blueprint $table) {
+        if (Schema::hasTable('ec_taxes_translations')) {
+            return;
+        }
+
+        Schema::create('ec_taxes_translations', function (Blueprint $table): void {
             $table->string('lang_code');
             $table->foreignId('ec_taxes_id');
             $table->string('title')->nullable();

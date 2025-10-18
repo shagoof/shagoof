@@ -99,7 +99,7 @@
         }
 
         .owl-prev {
-            margin-left: 3rem;
+            margin-left: 1.875rem; // Was 3rem (30px), now 30px/16px
 
             i {
                 padding-right: 5px;
@@ -108,7 +108,7 @@
 
         .owl-next {
             float: right;
-            margin-right: 3rem;
+            margin-right: 1.875rem; // Was 3rem (30px), now 30px/16px
 
             i {
                 padding-left: 5px;
@@ -129,7 +129,7 @@
     }
 
     @include media("<lg") {
-        margin-bottom: 3rem;
+        margin-bottom: 1.875rem; // Was 3rem (30px), now 30px/16px
         padding-bottom: 30px;
         .owl-nav {
             display: none;
@@ -225,8 +225,27 @@
         }
     }
 
+    // Special styling for single-item carousel
+    &.single-item-carousel {
+        .owl-stage {
+            display: flex;
+            justify-content: flex-start; // Align to the left
+        }
+
+        .owl-item {
+            width: auto !important;
+            max-width: 100%;
+
+            .ps-product {
+                width: auto;
+                max-width: 300px;
+                margin: 0; // Remove auto margins
+            }
+        }
+    }
+
     @include media("<lg") {
-        margin-bottom: 3rem;
+        margin-bottom: 1.875rem; // Was 3rem (30px), now 30px/16px
         padding-bottom: 30px;
         .owl-nav {
             display: none;

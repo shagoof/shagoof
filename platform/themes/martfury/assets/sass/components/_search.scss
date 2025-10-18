@@ -25,7 +25,7 @@
         @include center();
         max-width: 1200px;
         width: 100%;
-        padding: 0 3rem;
+        padding: 0 1.875rem; // Was 3rem (30px), now 30px/16px
         @include center();
     }
     .ps-form--primary-search {
@@ -35,8 +35,8 @@
     }
     > .ps-btn--close {
         position: absolute;
-        top: 1rem;
-        right: 1rem;
+        top: 0.625rem; // Was 1rem (10px), now 10px/16px
+        right: 0.625rem; // Was 1rem (10px), now 10px/16px
         width: 50px;
         height: 50px;
         background-color: #000;
@@ -77,7 +77,7 @@
 
         }
         &__content {
-            padding: 0 1.5rem;
+            padding: 0 0.9375rem; // Was 1.5rem (15px), now 15px/16px
         }
     }
 

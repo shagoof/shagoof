@@ -116,7 +116,7 @@ class DashboardController extends BaseController
                 'shipping_amount',
                 'payment_id',
             ])
-            ->with(['user', 'payment'])
+            ->with(['user'])
             ->where([
                 'is_finished' => 1,
                 'store_id' => $store->id,
@@ -176,7 +176,7 @@ class DashboardController extends BaseController
 
         if (! RvMedia::isChunkUploadEnabled()) {
             $validator = Validator::make($request->all(), [
-                'file.0' => ['required', 'image', 'mimes:jpg,jpeg,png'],
+                'file.0' => ['required', 'image', 'mimes:jpg,jpeg,png,webp'],
             ]);
 
             if ($validator->fails()) {

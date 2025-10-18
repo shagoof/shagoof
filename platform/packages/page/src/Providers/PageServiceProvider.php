@@ -29,12 +29,16 @@ class PageServiceProvider extends ServiceProvider
 
         $this
             ->setNamespace('packages/page')
-            ->loadAndPublishConfigurations(['permissions', 'general'])
+            ->loadAndPublishConfigurations(['permissions'])
             ->loadHelpers()
             ->loadAndPublishViews()
             ->loadAndPublishTranslations()
             ->loadRoutes()
             ->loadMigrations();
+
+        if (class_exists('ApiHelper')) {
+            $this->loadRoutes(['api']);
+        }
 
         DashboardMenu::default()->beforeRetrieving(function (): void {
             DashboardMenu::make()

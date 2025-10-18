@@ -1,13 +1,13 @@
 .ps-badge {
     position: absolute;
     padding: 5px 15px;
-    top: 1rem;
-    left: 1rem;
+    top: 0.625rem; // Was 1rem (10px), now 10px/16px
+    left: 0.625rem; // Was 1rem (10px), now 10px/16px
 
     @include border-radius(3px);
 
     i {
-        font-size: 1.4rem;
+        font-size: 0.875rem; // Was 1.4rem (14px), now 14px/16px
         color: #fff;
         font-weight: 500;
         line-height: 20px;
@@ -131,7 +131,7 @@
         --max-lines: 2;
         max-height: calc(1.2em * var(--max-lines));
         overflow: hidden;
-        padding-right: 1rem;
+        padding-right: 0.625rem; // Was 1rem (10px), now 10px/16px
 
         &:hover {
             color: $color-1st;
@@ -468,6 +468,7 @@
     display: flex;
     flex-flow: row nowrap;
     align-items: center;
+    gap: 10px;
 
     > * {
         flex-basic: 100%;
@@ -498,7 +499,7 @@
 }
 
 .ps-product--detail {
-    margin-bottom: 5rem;
+    margin-bottom: 3.125rem; // Was 5rem (50px), now 50px/16px
 
     h1 {
         margin-bottom: 10px;
@@ -642,8 +643,8 @@
             color: #ffffff;
             text-align: center;
             line-height: 1.2em;
-            font-size: 1.3rem;
-            letter-spacing: 0.2em;
+            font-size: 0.8125rem; // Was 1.3rem (13px), now 13px/16px
+            letter-spacing: 0.125em; // Was 0.2em (2px), now 2px/16px
         }
     }
 
@@ -716,7 +717,7 @@
         del {
             font-style: normal;
             color: #bcbcbc;
-            font-size: 1.3rem;
+            font-size: 0.8125rem; // Was 1.3rem (13px), now 13px/16px
         }
 
         &.sale {
@@ -780,7 +781,7 @@
 
     .ps-product__shopping {
         display: flex;
-        margin-bottom: 3rem;
+        margin-bottom: 1.875rem; // Was 3rem (30px), now 30px/16px
         padding-bottom: 30px;
         flex-flow: row nowrap;
         align-items: flex-end;
@@ -916,7 +917,7 @@
     }
 
     .ps-product__links {
-        margin-bottom: 3rem;
+        margin-bottom: 1.875rem; // Was 3rem (30px), now 30px/16px
 
         a {
             display: inline-block;
@@ -967,62 +968,12 @@
         }
     }
 
-    .ps-product__sharing {
-        padding-top: 2rem;
-        margin-bottom: 0;
-
-        p {
-            line-height: 30px;
-            color: $color-heading;
-            font-weight: 500;
-        }
-
-        a {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            margin-right: 10px;
-            vertical-align: top;
-
-            i {
-                @include center;
-                font-size: 20px;
-                color: #ffffff;
-            }
-
-            &:last-child {
-                margin-right: 0;
-            }
-
-            &:hover {
-                color: #fff;
-                background-color: $color-1st;
-            }
-
-            &.facebook {
-                background-color: $color-facebook;
-            }
-
-            &.twitter {
-                background-color: $color-twitter;
-            }
-
-            &.google {
-                background-color: $color-google;
-            }
-
-            &.linkedin {
-                background-color: $color-linkedin;
-            }
-        }
-    }
-
     .ps-product__bundle {
-        margin-bottom: 2rem;
+        margin-bottom: 1.25rem; // Was 2rem (20px), now 20px/16px
 
         h4 {
             font-weight: 600;
-            font-size: 2.1rem;
+            font-size: 1.3125rem; // Was 2.1rem (21px), now 21px/16px
         }
 
         .form-group {
@@ -1103,7 +1054,7 @@
     }
 
     .ps-product__variations {
-        margin-bottom: 2rem;
+        margin-bottom: 1.25rem; // Was 2rem (20px), now 20px/16px
 
         figure {
             margin-bottom: 15px;
@@ -1545,7 +1496,7 @@
             }
 
             .ps-product__info {
-                padding-left: 3rem;
+                padding-left: 1.875rem; // Was 3rem (30px), now 30px/16px
             }
         }
         .ps-product__shopping {
@@ -1561,10 +1512,10 @@
 
             .tab-list {
                 li {
-                    margin-right: 3rem;
+                    margin-right: 1.875rem; // Was 3rem (30px), now 30px/16px
 
                     a {
-                        font-size: 1.4rem;
+                        font-size: 0.875rem; // Was 1.4rem (14px), now 14px/16px
                     }
                 }
             }
@@ -1577,7 +1528,7 @@
 
             .ps-product__thumbnail {
                 max-width: 100%;
-                margin-bottom: 3rem;
+                margin-bottom: 1.875rem; // Was 3rem (30px), now 30px/16px
             }
 
             .ps-product__info {
@@ -1588,11 +1539,7 @@
         }
 
         h1 {
-            font-size: 2.4rem;
-        }
-
-        .ps-product__sharing {
-            text-align: left;
+            font-size: 1.5rem; // Was 2.4rem (24px), now 24px/16px
         }
 
         > .ps-product__content {
@@ -1621,7 +1568,7 @@
         .ps-product__meta {
             p {
                 float: none;
-                margin-bottom: 1rem;
+                margin-bottom: 0.625rem; // Was 1rem (10px), now 10px/16px
             }
 
             > a {
@@ -1655,7 +1602,7 @@
             .ps-form--number {
                 max-width: 100%;
                 width: 100%;
-                margin-bottom: 1rem;
+                margin-bottom: 0.625rem; // Was 1rem (10px), now 10px/16px
             }
 
             .ps-btn {

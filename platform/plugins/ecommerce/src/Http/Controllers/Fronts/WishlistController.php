@@ -33,7 +33,6 @@ class WishlistController extends BaseController
                 'current_paged' => $request->integer('page', 1) ?: 1,
             ],
             'with' => ['slugable'],
-            ...EcommerceHelper::withReviewsParams(),
         ];
 
         if ($code && EcommerceHelper::isWishlistSharingEnabled()) {

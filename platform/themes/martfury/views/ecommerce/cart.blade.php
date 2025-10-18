@@ -38,7 +38,7 @@
                                                                 <a href="{{ $product->original_product->url }}">{{ $product->original_product->name }}  @if ($product->isOutOfStock()) <span class="stock-status-label">({!! $product->stock_status_html !!})</span> @endif</a>
                                                                 @if (is_plugin_active('marketplace') && $product->original_product->store->id)
                                                                     <p class="d-block mb-0 sold-by"><small>{{ __('Sold by') }}: <a
-                                                                                href="{{ $product->original_product->store->url }}">{{ $product->original_product->store->name }}</a></small></p>
+                                                                                href="{{ $product->original_product->store->url }}">{{ $product->original_product->store->name }} {!! $product->original_product->store->badge !!}</a></small></p>
                                                                 @endif
 
                                                                 <p class="mb-0"><small>{{ $cartItem->options['attributes'] ?? '' }}</small></p>

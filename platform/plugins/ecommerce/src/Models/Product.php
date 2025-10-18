@@ -5,16 +5,21 @@ namespace Botble\Ecommerce\Models;
 use Botble\ACL\Models\User;
 use Botble\Base\Casts\SafeContent;
 use Botble\Base\Enums\BaseStatusEnum;
+use Botble\Base\Facades\BaseHelper;
 use Botble\Base\Models\BaseModel;
 use Botble\Ecommerce\Enums\DiscountTargetEnum;
 use Botble\Ecommerce\Enums\DiscountTypeEnum;
+use Botble\Ecommerce\Enums\ProductLicenseCodeStatusEnum;
 use Botble\Ecommerce\Enums\ProductTypeEnum;
 use Botble\Ecommerce\Enums\StockStatusEnum;
 use Botble\Ecommerce\Events\ProductQuantityUpdatedEvent;
 use Botble\Ecommerce\Facades\EcommerceHelper;
+use Botble\Ecommerce\Services\ProductCacheService;
 use Botble\Ecommerce\Services\Products\UpdateDefaultProductService;
 use Botble\Faq\Models\Faq;
 use Botble\Media\Facades\RvMedia;
+use Botble\Slug\Facades\SlugHelper;
+use Botble\Theme\Supports\Vimeo;
 use Botble\Theme\Supports\Youtube;
 use Carbon\Carbon;
 use Exception;
@@ -30,6 +35,7 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 /**
@@ -70,11 +76,14 @@ class Product extends BaseModel
         'stock_status',
         'barcode',
         'cost_per_item',
+        'price_includes_tax',
         'generate_license_code',
+        'license_code_type',
         'minimum_order_quantity',
         'maximum_order_quantity',
         'notify_attachment_updated',
         'specification_table_id',
+        'slug',
     ];
 
     protected $appends = [
@@ -99,16 +108,55 @@ class Product extends BaseModel
         'is_featured' => 'bool',
         'allow_checkout_when_out_of_stock' => 'bool',
         'with_storehouse_management' => 'bool',
+        'price_includes_tax' => 'bool',
         'generate_license_code' => 'bool',
         'notify_attachment_updated' => 'bool',
         'video_media' => 'json',
+        'length' => 'float',
+        'wide' => 'float',
+        'height' => 'float',
+        'weight' => 'float',
+        'views' => 'int',
+        'quantity' => 'int',
+        'order' => 'int',
+        'cost_per_item' => 'float',
+        'is_variation' => 'bool',
+        'variations_count' => 'int',
+        'reviews_count' => 'int',
+        'reviews_avg' => 'float',
     ];
+
+    protected function url(): Attribute
+    {
+        return Attribute::get(function (): string {
+            if (! $this->slug && $this->slugable) {
+                $this->slug = $this->slugable->key;
+            }
+
+            if (! $this->slug) {
+                return BaseHelper::getHomepageUrl();
+            }
+
+            $prefix = SlugHelper::getPrefix(Product::class);
+
+            $prefix = apply_filters(FILTER_SLUG_PREFIX, $prefix);
+
+            return apply_filters(
+                'slug_filter_url',
+                url(ltrim($prefix . '/' . $this->slug, '/')) . SlugHelper::getPublicSingleEndingURL()
+            );
+        });
+    }
 
     protected static function booted(): void
     {
         static::creating(function (Product $product): void {
             $product->created_by_id = Auth::check() ? Auth::id() : 0;
             $product->created_by_type = User::class;
+        });
+
+        static::deleting(function (Product $product): void {
+            app(ProductCacheService::class)->clearProductCache($product);
         });
 
         static::deleted(function (Product $product): void {
@@ -129,12 +177,21 @@ class Product extends BaseModel
             $product->productLabels()->detach();
             $product->tags()->detach();
             $product->specificationAttributes()->detach();
+            $product->licenseCodes()->delete();
+        });
+
+        static::saved(function (Product $product): void {
+            app(ProductCacheService::class)->clearProductCache($product);
         });
 
         static::updated(function (Product $product): void {
             if ($product->is_variation && $product->original_product->defaultVariation->product_id == $product->getKey()) {
                 app(UpdateDefaultProductService::class)->execute($product);
+            }
 
+            // Trigger quantity updated event if quantity, stock status, or storehouse management changed
+            $quantityRelatedFields = ['quantity', 'stock_status', 'with_storehouse_management', 'allow_checkout_when_out_of_stock'];
+            if ($product->wasChanged($quantityRelatedFields)) {
                 ProductQuantityUpdatedEvent::dispatch($product);
             }
 
@@ -320,6 +377,18 @@ class Product extends BaseModel
             ->withPivot('value', 'hidden', 'order');
     }
 
+    public function getVisibleSpecificationAttributes()
+    {
+        return $this->specificationAttributes
+            ->where('pivot.hidden', false)
+            ->sortBy('pivot.order');
+    }
+
+    public function getSpecificationAttributePivot(SpecificationAttribute $attribute)
+    {
+        return $this->specificationAttributes->where('id', $attribute->id)->first();
+    }
+
     protected function crossSaleProducts(): Attribute
     {
         return Attribute::get(function () {
@@ -418,8 +487,24 @@ class Product extends BaseModel
     {
         return Attribute::make(
             get: function () {
-                return (bool) $this->defaultVariation->id;
+                return $this->variations_count > 1;
             }
+        );
+    }
+
+    protected function hasVariation(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                return $this->variations_count > 0;
+            }
+        );
+    }
+
+    protected function averageRating(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->reviews_avg
         );
     }
 
@@ -434,6 +519,10 @@ class Product extends BaseModel
 
     public function canAddToCart(int $quantity): bool
     {
+        if ($this->with_storehouse_management && $this->allow_checkout_when_out_of_stock) {
+            return true;
+        }
+
         if ($this->max_cart_quantity < $quantity) {
             return false;
         }
@@ -442,11 +531,7 @@ class Product extends BaseModel
             return true;
         }
 
-        if (($this->quantity - $quantity) >= 0) {
-            return true;
-        }
-
-        return $this->allow_checkout_when_out_of_stock;
+        return ($this->quantity - $quantity) >= 0;
     }
 
     public function promotions(): BelongsToMany
@@ -503,10 +588,17 @@ class Product extends BaseModel
 
     protected function totalTaxesPercentage(): Attribute
     {
-        return Attribute::get(fn () => $this->taxes
-            ->where(fn ($item) => ! $item->rules || $item->rules->isEmpty())
-            ->where('status', BaseStatusEnum::PUBLISHED)
-            ->sum('percentage'));
+        return Attribute::get(function () {
+            $taxes = $this->taxes
+                ->where(fn ($item) => ! $item->rules || $item->rules->isEmpty())
+                ->where('status', BaseStatusEnum::PUBLISHED);
+
+            if ($taxes->isEmpty() && $defaultTaxRate = get_ecommerce_setting('default_tax_rate')) {
+                return Tax::query()->where('id', $defaultTaxRate)->value('percentage') ?: 0;
+            }
+
+            return $taxes->sum('percentage');
+        });
     }
 
     public function variationProductAttributes(): HasMany
@@ -573,18 +665,18 @@ class Product extends BaseModel
                         $selectedFaqs = Faq::query()
                             ->wherePublished()
                             ->whereIn('id', $selectedExistingFaqs)
-                            ->pluck('answer', 'question')
-                            ->all();
+                            ->select(['id', 'question', 'answer'])
+                            ->get();
 
-                        foreach ($selectedFaqs as $question => $answer) {
+                        foreach ($selectedFaqs as $selectedFaq) {
                             $faqs[] = [
                                 [
                                     'key' => 'question',
-                                    'value' => $question,
+                                    'value' => $selectedFaq->question,
                                 ],
                                 [
                                     'key' => 'answer',
-                                    'value' => $answer,
+                                    'value' => $selectedFaq->answer,
                                 ],
                             ];
                         }
@@ -599,7 +691,9 @@ class Product extends BaseModel
             }
 
             foreach ($faqs as $key => $item) {
-                if (! $item[0]['value'] && ! $item[1]['value']) {
+                if (! is_array($item) || ! isset($item[0], $item[1]) ||
+                    ! isset($item[0]['value'], $item[1]['value']) ||
+                    (! $item[0]['value'] && ! $item[1]['value'])) {
                     Arr::forget($faqs, $key);
                 }
             }
@@ -634,6 +728,21 @@ class Product extends BaseModel
         return $this->hasMany(ProductFile::class, 'product_id');
     }
 
+    public function licenseCodes(): HasMany
+    {
+        return $this->hasMany(ProductLicenseCode::class, 'product_id');
+    }
+
+    public function availableLicenseCodes(): HasMany
+    {
+        return $this->hasMany(ProductLicenseCode::class, 'product_id')->where('status', ProductLicenseCodeStatusEnum::AVAILABLE);
+    }
+
+    public function usedLicenseCodes(): HasMany
+    {
+        return $this->hasMany(ProductLicenseCode::class, 'product_id')->where('status', ProductLicenseCodeStatusEnum::USED);
+    }
+
     protected function productFileExternalCount(): Attribute
     {
         return Attribute::get(fn () => $this->productFiles->filter(fn (ProductFile $file) => $file->is_external_link)->count());
@@ -642,6 +751,20 @@ class Product extends BaseModel
     protected function productFileInternalCount(): Attribute
     {
         return Attribute::get(fn () => $this->productFiles->filter(fn (ProductFile $file) => ! $file->is_external_link)->count());
+    }
+
+    public function hasFiles(): bool
+    {
+        return $this->productFiles()->count() > 0;
+    }
+
+    public function scopeForCart(Builder $query): Builder
+    {
+        return $query->with([
+            'variations',
+            'defaultVariation.product',
+            'variationInfo.configurableProduct',
+        ]);
     }
 
     public function scopeNotOutOfStock(Builder $query): Builder
@@ -673,7 +796,7 @@ class Product extends BaseModel
 
     public function options(): HasMany
     {
-        return $this->hasMany(Option::class)->orderBy('order');
+        return $this->hasMany(Option::class)->oldest('order');
     }
 
     public function generateSku(): float|string|null
@@ -718,8 +841,24 @@ class Product extends BaseModel
 
     public static function getGroupedVariationQuery(): QueryBuilder
     {
-        return self::query()
-            ->toBase()
+        $variationAttributesSubquery = DB::table('ec_product_variations as pv')
+            ->select([
+                'pv.product_id',
+                DB::raw("GROUP_CONCAT(CONCAT(pas.title, ': ', pa.title) ORDER BY pas.order, pa.order SEPARATOR ', ') as variation_attributes"),
+            ])
+            ->leftJoin('ec_product_variation_items as pvi', 'pvi.variation_id', '=', 'pv.id')
+            ->leftJoin('ec_product_attributes as pa', 'pa.id', '=', 'pvi.attribute_id')
+            ->leftJoin('ec_product_attribute_sets as pas', 'pas.id', '=', 'pa.attribute_set_id')
+            ->groupBy('pv.product_id');
+
+        $variationsCountSubquery = DB::table('ec_product_variations')
+            ->select([
+                'configurable_product_id',
+                DB::raw('COUNT(*) as variations_count'),
+            ])
+            ->groupBy('configurable_product_id');
+
+        return DB::table('ec_products')
             ->select([
                 'ec_products.id',
                 'ec_products.name',
@@ -727,25 +866,21 @@ class Product extends BaseModel
                 'ec_products.images',
                 'ec_products.sku',
                 'ec_products.is_variation',
-                'ec_product_variations.configurable_product_id as parent_product_id',
-                'variation_attributes' => DB::table('ec_product_variations')
-                    ->selectRaw("GROUP_CONCAT(ec_product_attribute_sets.title, ': ', ec_product_attributes.title SEPARATOR ', ')")
-                    ->whereColumn('ec_products.id', 'ec_product_variations.product_id')
-                    ->leftJoin('ec_product_variation_items', 'ec_product_variation_items.variation_id', '=', 'ec_product_variations.id')
-                    ->leftJoin('ec_product_attributes', 'ec_product_attributes.id', '=', 'ec_product_variation_items.attribute_id')
-                    ->leftJoin('ec_product_attribute_sets', 'ec_product_attribute_sets.id', '=', 'ec_product_attributes.attribute_set_id')
-                    ->groupBy('product_id'),
-                'variations_count' => DB::table('ec_product_variations')
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('ec_products.id', 'ec_product_variations.configurable_product_id')
-                    ->groupBy('configurable_product_id'),
+                'pv.configurable_product_id as parent_product_id',
+                'va.variation_attributes',
+                'vc.variations_count',
             ])
-            ->leftJoin('ec_product_variations', function (JoinClause $join): void {
-                $join
-                    ->on('ec_products.id', '=', 'ec_product_variations.product_id')
-                    ->where('ec_products.is_variation', 1);
+            ->leftJoin('ec_product_variations as pv', function (JoinClause $join): void {
+                $join->on('ec_products.id', '=', 'pv.product_id')
+                     ->where('ec_products.is_variation', '=', 1);
             })
-            ->oldest('name')
+            ->leftJoinSub($variationAttributesSubquery, 'va', function (JoinClause $join): void {
+                $join->on('ec_products.id', '=', 'va.product_id');
+            })
+            ->leftJoinSub($variationsCountSubquery, 'vc', function (JoinClause $join): void {
+                $join->on('ec_products.id', '=', 'vc.configurable_product_id');
+            })
+            ->oldest('ec_products.name')
             ->oldest('parent_product_id');
     }
 
@@ -778,29 +913,45 @@ class Product extends BaseModel
 
                     $thumbnail = Arr::get($item, '2.value');
 
-                    if (! $thumbnail) {
-                        $thumbnail = RvMedia::getDefaultImage();
+                    $data = [
+                        'url' => $url,
+                        'thumbnail' => $thumbnail ? RvMedia::getImageUrl($thumbnail) : null,
+                    ];
+
+                    if (Youtube::isYoutubeURL($url)) {
+                        $data['provider'] = 'youtube';
+                        $data['url'] = Youtube::getYoutubeVideoEmbedURL($url) . '?enablejsapi=1&iv_load_policy=3&fs=0&rel=0&loop=1&start=1';
+                        if (! $data['thumbnail']) {
+                            $data['thumbnail'] = Youtube::getThumbnail($url);
+                        }
+                    } elseif (Vimeo::isVimeoURL($url)) {
+                        $videoId = Vimeo::getVimeoID($url);
+                        if ($videoId) {
+                            $data['provider'] = 'vimeo';
+                            $data['url'] = 'https://player.vimeo.com/video/' . $videoId;
+                            if (! $data['thumbnail']) {
+                                $data['thumbnail'] = 'https://vumbnail.com/' . $videoId . '.jpg';
+                            }
+                        }
+                    } elseif (preg_match(
+                        '/^.*https:\/\/(?:m|www|vm)?\.?tiktok\.com\/((?:.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+))|\w+)/',
+                        $url
+                    )) {
+                        $data['provider'] = 'tiktok';
+                        $data['video_id'] = Str::afterLast($url, 'video/');
+                    } elseif (preg_match('/^.*https:\/\/twitter\.com\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/', $url)) {
+                        $data['provider'] = 'twitter';
+                    } elseif (in_array(Str::lower(File::extension($url)), ['mp4', 'webm', 'ogg'])) {
+                        $data['provider'] = 'video';
+                    } else {
+                        $data['provider'] = 'iframe';
                     }
 
-                    $isVimeo = (bool) preg_match('/^https?:\/\/(www\.)?vimeo\.com\/(\d+)(#.*)?$/i', $url);
+                    if (! $data['thumbnail']) {
+                        $data['thumbnail'] = RvMedia::getDefaultImage();
+                    }
 
-                    return [
-                        'provider' => match (true) {
-                            Youtube::isYoutubeURL($url) => 'youtube',
-                            $isVimeo => 'vimeo',
-                            default => 'video',
-                        },
-                        'url' => match (true) {
-                            Youtube::isYoutubeURL($url) => Youtube::getYoutubeVideoEmbedURL($url) . '?enablejsapi=1&iv_load_policy=3&fs=0&rel=0&loop=1&start=1',
-                            $isVimeo => 'https://player.vimeo.com/video/' . preg_replace('/^https?:\/\/(www\.)?vimeo\.com\//i', '', $url),
-                            default => $url,
-                        },
-                        'thumbnail' => match (true) {
-                            ! $thumbnail && Youtube::isYoutubeURL($url) => Youtube::getThumbnail($url),
-                            $isVimeo => 'https://vumbnail.com/' . preg_replace('/^https?:\/\/(www\.)?vimeo\.com\//i', '', $url),
-                            default => RvMedia::getImageUrl($thumbnail),
-                        },
-                    ];
+                    return $data;
                 })
                 ->all();
         })->shouldCache();
@@ -822,5 +973,59 @@ class Product extends BaseModel
 
             return $this->with_storehouse_management ? $this->quantity : 1000;
         });
+    }
+
+    protected function taxDescription(): Attribute
+    {
+        return Attribute::get(function () {
+            if (! EcommerceHelper::isTaxEnabled() || ! get_ecommerce_setting('display_tax_description', false)) {
+                return null;
+            }
+
+            $taxes = $this->taxes->isNotEmpty()
+                ? $this->taxes
+                : collect([(object) [
+                    'title' => get_ecommerce_setting('default_tax_rate') ? Tax::query()->find(get_ecommerce_setting('default_tax_rate'))->title : '',
+                    'percentage' => get_ecommerce_setting('default_tax_rate') ? Tax::query()->find(get_ecommerce_setting('default_tax_rate'))->percentage : 0,
+                ]]);
+
+            $taxes = $taxes->filter(fn ($tax) => $tax->percentage > 0);
+
+            if ($taxes->isEmpty()) {
+                return null;
+            }
+
+            $taxNames = $taxes->map(fn ($tax) => $tax->title . ' ' . $tax->percentage . '%')->implode(' + ');
+
+            if ($this->price_includes_tax || EcommerceHelper::isDisplayProductIncludingTaxes()) {
+                $description =  __('Including :tax', ['tax' => $taxNames]);
+            } else {
+                $description =__('Excluding :tax', ['tax' => $taxNames]);
+            }
+
+            $description = str_replace('{{ tax_percentage }}', $this->total_taxes_percentage, $description);
+
+            return BaseHelper::clean('(' . $description . ')');
+        });
+    }
+
+    public function updateReviewsCache(): void
+    {
+        $stats = $this->reviews()
+            ->selectRaw('COUNT(*) as count, AVG(star) as avg')
+            ->first();
+
+        $count = $stats->count ?? 0;
+        $avg = round($stats->avg ?? 0, 2);
+
+        DB::table('ec_products')
+            ->where('id', $this->id)
+            ->update([
+                'reviews_count' => $count,
+                'reviews_avg' => $avg,
+            ]);
+
+        $this->setAttribute('reviews_count', $count);
+        $this->setAttribute('reviews_avg', $avg);
     }
 }

@@ -246,7 +246,7 @@ class OrderSeeder extends BaseSeeder
                  */
                 $storeLocator = $storeLocatorsCount > 1 ? $storeLocators->random() : null;
 
-                if ($isAvailableShipping) {
+                if ($isAvailableShipping && ! Shipment::query()->where(['order_id' => $order->getKey()])->exists()) {
                     $shipment = Shipment::query()->create([
                         'status' => $shipmentStatus,
                         'order_id' => $order->getKey(),
@@ -343,7 +343,7 @@ class OrderSeeder extends BaseSeeder
                     'user_id' => 0,
                 ]);
 
-                if ($isMarketplace && $order->store->id && $order->store->customer->id) {
+                if ($isMarketplace && $order->store?->id && $order->store->customer->id) {
                     $customer = $order->store->customer;
                     $vendorInfo = $customer->vendorInfo;
 

@@ -99,6 +99,11 @@ final class Core
         $this->parseDataFromCoreDataFile();
     }
 
+    private function isLicenseStoredInDatabase(): bool
+    {
+        return config('core.base.general.license_storage_method') === 'database';
+    }
+
     public static function make(): self
     {
         return app(self::class);
@@ -207,9 +212,21 @@ final class Core
         }
 
         try {
-            $this->files->put($this->licenseFilePath, Arr::get($data, 'lic_response'), true);
-        } catch (UnableToWriteFile|Throwable) {
-            throw UnableToWriteFile::atLocation($this->licenseFilePath);
+            $licenseContent = Arr::get($data, 'lic_response');
+
+            if ($this->isLicenseStoredInDatabase()) {
+                Setting::forceSet('license_file_content', $licenseContent)->save();
+            } else {
+                $this->files->put($this->licenseFilePath, $licenseContent, true);
+            }
+
+            $this->storeLicenseMetadata($license, $client);
+        } catch (UnableToWriteFile|Throwable $exception) {
+            if ($this->isLicenseStoredInDatabase()) {
+                throw new LicenseInvalidException('Could not store license in database: ' . $exception->getMessage());
+            } else {
+                throw UnableToWriteFile::atLocation($this->licenseFilePath);
+            }
         }
 
         Session::forget("license:{$this->getLicenseCacheKey()}:last_checked_date");
@@ -229,6 +246,12 @@ final class Core
             return false;
         }
 
+        if ($timeBasedCheck && $this->isLicenseFullyVerified()) {
+            LicenseVerified::dispatch();
+
+            return true;
+        }
+
         $verified = true;
 
         if ($timeBasedCheck) {
@@ -242,6 +265,7 @@ final class Core
 
             if ($now->greaterThan($lastCheckedDate) && $verified = $this->verifyLicenseDirectly($timeoutInSeconds)) {
                 Session::put($cachesKey, $now->format($dateFormat));
+                $this->updateLicenseVerificationData();
             }
 
             return $verified;
@@ -313,7 +337,7 @@ final class Core
         });
     }
 
-    public function getLicenseUrl(string $path = null): string
+    public function getLicenseUrl(?string $path = null): string
     {
         return $this->licenseUrl . ($path ? '/' . ltrim($path, '/') : '');
     }
@@ -648,12 +672,24 @@ final class Core
             return null;
         }
 
+        if ($this->isLicenseStoredInDatabase()) {
+            return Setting::get('license_file_content');
+        }
+
         return $this->files->get($this->licenseFilePath);
     }
 
     private function forgotLicensedInformation(): void
     {
-        Setting::forceDelete('licensed_to');
+        Setting::forceSet(['licensed_to' => ''])->save();
+
+        if ($this->isLicenseStoredInDatabase()) {
+            Setting::forceSet(['license_file_content' => ''])->save();
+        }
+
+        $this->clearLicenseMetadata();
+
+        Setting::load(true);
     }
 
     private function parseDataFromCoreDataFile(): void
@@ -694,7 +730,7 @@ final class Core
 
             self::$coreFileData = $data;
 
-            $this->cache->forever('core_file_data', $data);
+            $this->cache->put('core_file_data', $data, Carbon::now()->addMinutes(30));
 
             return $data;
         } catch (FileNotFoundException) {
@@ -743,7 +779,11 @@ final class Core
         $data = $response->json();
 
         if ($response->ok() && Arr::get($data, 'status')) {
-            $this->files->delete($this->licenseFilePath);
+            if ($this->isLicenseStoredInDatabase()) {
+                Setting::forceDelete('license_file_content');
+            } else {
+                $this->files->delete($this->licenseFilePath);
+            }
 
             $this->forgotLicensedInformation();
 
@@ -755,7 +795,18 @@ final class Core
 
     private function getClientIpAddress(): string
     {
+        $staticIp = config('core.base.general.static_ip');
+
+        if ($staticIp && filter_var($staticIp, FILTER_VALIDATE_IP)) {
+            return $staticIp;
+        }
+
         return Helper::getIpFromThirdParty();
+    }
+
+    public function getServerIP(): string
+    {
+        return $this->getClientIpAddress();
     }
 
     private function verifyLicenseDirectly(int $timeoutInSeconds = 300): bool
@@ -774,20 +825,29 @@ final class Core
         try {
             $response = $this->createRequest('verify_license', $data, $timeoutInSeconds);
         } catch (CouldNotConnectToLicenseServerException) {
-            LicenseUnverified::dispatch();
-
-            return false;
+            return true;
         }
 
         $data = $response->json();
 
-        if ($verified = $response->ok() && Arr::get($data, 'status')) {
+        if ($response->ok() && Arr::get($data, 'status')) {
             LicenseVerified::dispatch();
+
+            return true;
         } else {
             LicenseUnverified::dispatch();
-        }
 
-        return $verified;
+            $statusCode = Arr::get($data, 'status_code');
+            $message = Arr::get($data, 'message', '');
+
+            if ($statusCode === 'LICENSE_DEACTIVATED' ||
+                (Str::contains(Str::lower($message), ['deactivated', 'invalid', 'not found']) &&
+                ! Str::contains(Str::lower($message), 'blocked'))) {
+                $this->handleDeactivatedLicense();
+            }
+
+            return false;
+        }
     }
 
     private function parseProductUpdateResponse(Response $response): CoreProduct|false
@@ -815,11 +875,104 @@ final class Core
 
     protected function isLicenseFileExists(): bool
     {
+        if ($this->isLicenseStoredInDatabase()) {
+            return Setting::has('license_file_content') && ! empty(Setting::get('license_file_content'));
+        }
+
         return $this->files->exists($this->licenseFilePath);
     }
 
     public function getLicenseFilePath(): string
     {
         return $this->licenseFilePath;
+    }
+
+    private function storeLicenseMetadata(string $purchaseCode, string $client): void
+    {
+        $now = Carbon::now();
+
+        Setting::forceSet([
+            'license_activated_at' => $now->toIso8601String(),
+            'license_last_verified_at' => $now->toIso8601String(),
+            'license_next_check_at' => $now->copy()->addDays(7)->toIso8601String(),
+            'license_verification_count' => 1,
+            'license_purchase_code_hash' => hash('sha256', $purchaseCode),
+            'license_server_ip' => $this->getClientIpAddress(),
+            'license_domain' => parse_url(url('/'), PHP_URL_HOST),
+            'licensed_to' => $client,
+        ])->save();
+    }
+
+    private function clearLicenseMetadata(): void
+    {
+        $metadataKeys = [
+            'license_activated_at',
+            'license_last_verified_at',
+            'license_next_check_at',
+            'license_verification_count',
+            'license_purchase_code_hash',
+            'license_server_ip',
+            'license_domain',
+        ];
+
+        foreach ($metadataKeys as $key) {
+            Setting::forceSet([$key => ''])->save();
+        }
+    }
+
+    public function isLicenseFullyVerified(): bool
+    {
+        if (! Setting::has('license_activated_at') ||
+            ! Setting::has('license_last_verified_at') ||
+            ! Setting::has('license_next_check_at')) {
+            return false;
+        }
+
+        $nextCheckAt = Setting::get('license_next_check_at');
+        if ($nextCheckAt && Carbon::parse($nextCheckAt)->isFuture()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function hasLicenseData(): bool
+    {
+        if ($this->isLicenseStoredInDatabase()) {
+            return Setting::has('license_file_content') && ! empty(Setting::get('license_file_content'));
+        }
+
+        return $this->files->exists($this->licenseFilePath);
+    }
+
+    public function handleDeactivatedLicense(): void
+    {
+        if ($this->isLicenseStoredInDatabase()) {
+            Setting::forceSet(['license_file_content' => ''])->save();
+            Setting::forceSet(['licensed_to' => ''])->save();
+        } else {
+            if ($this->files->exists($this->licenseFilePath)) {
+                $this->files->delete($this->licenseFilePath);
+            }
+        }
+
+        $this->clearLicenseMetadata();
+
+        Setting::load(true);
+
+        Session::forget("license:{$this->getLicenseCacheKey()}:last_checked_date");
+        session()->forget('license_check_time');
+    }
+
+    public function updateLicenseVerificationData(): void
+    {
+        $now = Carbon::now();
+        $verificationCount = (int) Setting::get('license_verification_count', 0);
+
+        Setting::forceSet([
+            'license_last_verified_at' => $now->toIso8601String(),
+            'license_next_check_at' => $now->copy()->addDays(7)->toIso8601String(),
+            'license_verification_count' => $verificationCount + 1,
+        ])->save();
     }
 }

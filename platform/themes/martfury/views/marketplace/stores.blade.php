@@ -8,7 +8,7 @@
                 <div class="ps-section__search row">
                     <div class="col-md-4">
                         <form action="{{ route('public.stores') }}" method="get">
-                            <div class="form-group mb-3">
+                            <div class="mb-3">
                                 <button><i class="icon-magnifier"></i></button>
                                 <input class="form-control" name="q" value="{{ BaseHelper::stringify(request()->query('q')) }}" type="text" placeholder="{{ __('Search vendor...') }}">
                             </div>

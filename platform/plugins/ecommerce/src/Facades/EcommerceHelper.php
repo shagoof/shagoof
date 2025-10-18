@@ -3,6 +3,7 @@
 namespace Botble\Ecommerce\Facades;
 
 use Botble\Ecommerce\Supports\EcommerceHelper as BaseEcommerceHelper;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool isProductInCompare(string|int $productId)
  * @method static bool isReviewEnabled()
  * @method static bool isOrderTrackingEnabled()
+ * @method static string getOrderTrackingMethod()
+ * @method static bool isOrderTrackingUsingPhone()
  * @method static bool isOrderAutoConfirmedEnabled()
  * @method static float reviewMaxFileSize(bool $isConvertToKB = false)
  * @method static int reviewMaxFileNumber()
@@ -35,12 +38,13 @@ use Illuminate\Support\Facades\Facade;
  * @method static array getDateRangeInReport(\Illuminate\Http\Request $request)
  * @method static string|null getSettingPrefix()
  * @method static bool isEnableEmailVerification()
+ * @method static bool isCustomerRegistrationEnabled()
  * @method static bool disableOrderInvoiceUntilOrderConfirmed()
  * @method static bool isEnabledProductOptions()
  * @method static bool isEnabledCrossSaleProducts()
  * @method static bool isEnabledRelatedProducts()
  * @method static string getPhoneValidationRule()
- * @method static \Illuminate\Pagination\LengthAwarePaginator getProductReviews(\Botble\Ecommerce\Models\Product $product, int $star = 0, int $perPage = 10)
+ * @method static \Illuminate\Pagination\LengthAwarePaginator getProductReviews(\Botble\Ecommerce\Models\Product $product, int $star = 0, int $perPage = 10, string $search = '', string $sortBy = 'newest')
  * @method static string getThousandSeparatorForInputMask()
  * @method static string getDecimalSeparatorForInputMask()
  * @method static array withReviewsParams()
@@ -73,6 +77,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static array getOriginAddress()
  * @method static array getShippingData(\Illuminate\Support\Collection|array $products, array $session, array $origin, float $orderTotal, string|null $paymentMethod = null)
  * @method static bool onlyAllowCustomersPurchasedToReview()
+ * @method static bool hideRatingWhenNoReviews()
  * @method static bool isValidToProcessCheckout()
  * @method static array getMandatoryFieldsAtCheckout()
  * @method static array getEnabledMandatoryFieldsAtCheckout()
@@ -83,10 +88,11 @@ use Illuminate\Support\Facades\Facade;
  * @method static void clearProductMaxPriceCache()
  * @method static bool isEnabledFilterProductsByBrands()
  * @method static bool isEnabledFilterProductsByTags()
+ * @method static int getNumberOfPopularTagsForFilter()
  * @method static bool isEnabledFilterProductsByAttributes()
  * @method static \Illuminate\Support\Collection brandsForFilter(array $categoryIds = [])
  * @method static \Illuminate\Support\Collection tagsForFilter(array $categoryIds = [])
- * @method static array dataForFilter(\Botble\Ecommerce\Models\ProductCategory|null $category)
+ * @method static array dataForFilter(\Botble\Ecommerce\Models\ProductCategory|null $category, bool $currentCategoryOnly = false)
  * @method static array dataPriceRangesForFilter()
  * @method static bool isPriceRangesChecked(float $fromPrice, float $toPrice)
  * @method static array dataPriceRanges(int $stepPrice = 1000, int $stepCount = 10)
@@ -107,10 +113,20 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool isWishlistSharingEnabled()
  * @method static int getSharedWishlistLifetime()
  * @method static bool isDisabledPhysicalProduct()
+ * @method static bool isEnabledLicenseCodesForDigitalProducts()
+ * @method static bool isAutoCompleteDigitalOrdersAfterPayment()
  * @method static string|null getCurrentCreationContextProductType()
  * @method static void registerProductVideo()
  * @method static void registerProductGalleryOptions()
  * @method static bool isProductSpecificationEnabled()
+ * @method static bool isPaymentProofEnabled()
+ * @method static bool isEnabledFilterProductsByCategories()
+ * @method static bool isEnabledFilterProductsByPrice()
+ * @method static bool hideProductPrice()
+ * @method static array parseFilterParams(Request $request, string $paramName)
+ * @method static string getAssetVersion()
+ * @method static array parseJsonParam($param)
+ * @method static float roundPrice(float $price, $currency = null)
  *
  * @see \Botble\Ecommerce\Supports\EcommerceHelper
  */

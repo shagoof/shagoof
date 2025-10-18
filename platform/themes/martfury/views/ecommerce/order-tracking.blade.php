@@ -5,14 +5,14 @@
                 <h4 style="margin-bottom: 0;">{{ __('Order tracking') }}</h4>
                 <p class="text-center" style="margin-bottom: 30px;">{{ __('Tracking your order status') }}</p>
 
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="txt-order-id">{{ __('Order ID') }}<sup>*</sup></label>
                     <input class="form-control" name="order_id" id="txt-order-id" type="text" value="{{ old('order_id', request()->input('order_id')) }}" placeholder="{{ __('Order ID') }}">
                     @if ($errors->has('order_id'))
                         <span class="text-danger">{{ $errors->first('order_id') }}</span>
                     @endif
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="txt-email">{{ __('Email Address') }}<sup>*</sup></label>
                     <input class="form-control" name="email" id="txt-email" type="email" value="{{ old('email', request()->input('email')) }}" placeholder="{{ __('Your Email') }}">
                     @if ($errors->has('email'))
@@ -20,7 +20,7 @@
                     @endif
                 </div>
 
-                <div class="form-group submit">
+                <div class="mb-3 submit">
                     <button class="ps-btn ps-btn--fullwidth" type="submit">{{ __('Find') }}</button>
                 </div>
             </div>
@@ -36,7 +36,7 @@
                             <strong>{{ get_order_code($order->id) }}</strong>
                         </p>
                         <p>
-                            <span>{{ __('Time') }}:</span> <strong>{{ $order->created_at->translatedFormat('M d, Y h:m') }}</strong>
+                            <span>{{ __('Time') }}:</span> <strong>{{ Theme::formatDate($order->created_at) }}</strong>
                         </p>
                         <p>
                             <span>{{ __('Order status') }}:</span> <strong class="text-info">{{ $order->status->label() }}</strong>
@@ -56,7 +56,7 @@
                         @endif
 
                     </div>
-                    <div class="col-md-6 customer-information-box text-right">
+                    <div class="col-md-6 customer-information-box text-end">
                         <h5>{{ __('Customer information') }}</h5>
 
                         <p>
@@ -100,8 +100,8 @@
                                 <th class="text-center">{{ __('Image') }}</th>
                                 <th>{{ __('Product') }}</th>
                                 <th class="text-center">{{ __('Amount') }}</th>
-                                <th class="text-right" style="width: 100px">{{ __('Quantity') }}</th>
-                                <th class="price text-right">{{ __('Total') }}</th>
+                                <th class="text-end" style="width: 100px">{{ __('Quantity') }}</th>
+                                <th class="price text-end">{{ __('Total') }}</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -165,14 +165,14 @@
 
                                         @if (is_plugin_active('marketplace') && $product->original_product->store->id)
                                             <p class="d-block mb-0 sold-by">
-                                                <small>{{ __('Sold by') }}: <a href="{{ $product->original_product->store->url }}">{{ $product->original_product->store->name }}</a>
+                                                <small>{{ __('Sold by') }}: <a href="{{ $product->original_product->store->url }}">{{ $product->original_product->store->name }} {!! $product->original_product->store->badge !!}</a>
                                                 </small>
                                             </p>
                                         @endif
                                     </td>
                                     <td>{{ format_price($orderProduct->price, $orderProduct->currency) }}</td>
                                     <td class="text-center">{{ $orderProduct->qty }}</td>
-                                    <td class="money text-right">
+                                    <td class="money text-end">
                                         <strong>
                                             {{ format_price($orderProduct->price * $orderProduct->qty, $orderProduct->currency) }}
                                         </strong>

@@ -5,7 +5,7 @@
             <ul class="ps-section__links">
                 @foreach($productCollections as $item)
                     <li class="nav-item">
-                        <a class="@if ($loop->first) active @endif" href="#" data-url="{{ route('public.ajax.products-by-collection', $item->id, ['limit' => $limit]) }}">{{ $item->name }}</a>
+                        <a class="@if ($loop->first) active @endif" href="#" data-url="{{ route('public.ajax.products-by-collection', $item->id, ['limit' => $limit]) }}" title="{{ __('View products in') }} {{ $item->name }}">{{ $item->name }}</a>
                     </li>
                 @endforeach
             </ul>

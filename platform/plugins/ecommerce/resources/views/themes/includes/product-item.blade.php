@@ -1,5 +1,5 @@
 @php
-    $isConfigurable = $product->variations()->count() > 0;
+    $isConfigurable = $product->has_variation;
 @endphp
 
 <div class="card bb-product-item">
@@ -16,7 +16,7 @@
 
             @include(EcommerceHelper::viewPath('includes.product-price'))
 
-            @if(EcommerceHelper::isReviewEnabled())
+            @if(EcommerceHelper::isReviewEnabled() && (!EcommerceHelper::hideRatingWhenNoReviews() || $product->reviews_count > 0))
                 @include(EcommerceHelper::viewPath('includes.rating'))
             @endif
 

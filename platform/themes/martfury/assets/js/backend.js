@@ -95,240 +95,25 @@
             }
         }
 
-        window.onChangeSwatchesSuccess = function(res, $attrs) {
-            const $product = $attrs.closest('.ps-product--detail')
-            const $form = $product.find('.add-to-cart-form')
-            $product.find('.error-message').hide()
-            $product.find('.success-message').hide()
+        // Extend the default onChangeSwatchesSuccess to handle Martfury-specific elements
+        $(document).ready(function() {
+            // Store the original function if it exists
+            let originalOnChangeSwatchesSuccess = window.onChangeSwatchesSuccess
 
-            if (res) {
-                let buttonSubmit = $form.find('button[type=submit]')
-                let $headProduct
-                let $headForm
-                if ($product.closest('.ps-page--product').length) {
-                    $headProduct = $('.header--product')
-                    $headForm = $headProduct.find('.add-to-cart-form')
+            // Override with our extended version
+            window.onChangeSwatchesSuccess = function(res, $attrs) {
+                // Call the original function first (handles gallery, prices, SKU, etc.)
+                if (originalOnChangeSwatchesSuccess && typeof originalOnChangeSwatchesSuccess === 'function') {
+                    originalOnChangeSwatchesSuccess(res, $attrs)
                 }
 
-                if (res.error) {
-                    buttonSubmit.prop('disabled', true).addClass('btn-disabled')
-                    $product.find('.number-items-available').html('<span class="text-danger">(' + res.message + ')</span>').show()
-                    $form.find('.hidden-product-id').val('')
-                    if ($headForm && $headForm.length) {
-                        $headForm.find('.hidden-product-id').val('')
-                    }
-                } else {
-                    $product.find('.error-message').hide()
-
-                    $product.find('.ps-product__price span').text(res.data.display_sale_price)
-                    if (res.data.sale_price !== res.data.price) {
-                        $product.find('.ps-product__price del').text(res.data.display_price).show()
-                    } else {
-                        $product.find('.ps-product__price del').hide()
-                    }
-
-                    if ($headProduct && $headProduct.length) {
-                        $headProduct.find('.ps-product__price span').text(res.data.display_sale_price)
-                        if (res.data.sale_price !== res.data.price) {
-                            $headProduct.find('.ps-product__price del').text(res.data.display_price).show()
-                        } else {
-                            $headProduct.find('.ps-product__price del').hide()
-                        }
-                    }
-
-                    if ($headForm && $headForm.length) {
-                        $headForm.find('.ps-product__price span').text(res.data.display_sale_price)
-                        if (res.data.sale_price !== res.data.price) {
-                            $headForm.find('.ps-product__price del').text(res.data.display_price).show()
-                        } else {
-                            $headForm.find('.ps-product__price del').hide()
-                        }
-                    }
-
-                    if (res.data.sku && $product.length) {
-                        const skuText = $product.find('.ps-product__specification #product-sku')
-                        skuText.closest('p').show()
-                        skuText.text(res.data.sku)
-                    }
-
-                    $form.find('.hidden-product-id').val(res.data.id)
-
-                    $('.navigation--mobile-product .hidden-product-id').val(res.data.id)
-
-                    if ($headForm && $headForm.length) {
-                        $headForm.find('.hidden-product-id').val(res.data.id)
-                    }
-
-                    buttonSubmit.prop('disabled', false).removeClass('btn-disabled')
-                    if ($headForm && $headForm.length) {
-                        $headForm.find('button[type=submit]').prop('disabled', false).removeClass('btn-disabled')
-                    }
-
-                    if (res.data.error_message) {
-                        buttonSubmit.prop('disabled', true).addClass('btn-disabled')
-                        if ($headForm && $headForm.length) {
-                            $headForm.find('button[type=submit]').prop('disabled', true).addClass('btn-disabled')
-                        }
-                        $product.find('.number-items-available').html('<span class="text-danger">(' + res.data.error_message + ')</span>').show()
-                    } else if (res.data.success_message) {
-                        $product.find('.number-items-available').html('<span class="text-success">(' + res.data.success_message + ')</span>').show()
-                    } else {
-                        $product.find('.number-items-available').html('').hide()
-                    }
-
-                    const unavailableAttributeIds = res.data.unavailable_attribute_ids || []
-                    $product.find('.attribute-swatch-item').removeClass('pe-none')
-                    $product.find('.product-filter-item option').prop('disabled', false)
-                    if (unavailableAttributeIds && unavailableAttributeIds.length) {
-                        unavailableAttributeIds.map(function(id) {
-                            let $item = $product.find('.attribute-swatch-item[data-id="' + id + '"]')
-                            if ($item.length) {
-                                $item.addClass('pe-none')
-                                $item.find('input').prop('checked', false)
-                            } else {
-                                $item = $product.find('.product-filter-item option[data-id="' + id + '"]')
-                                if ($item.length) {
-                                    $item.prop('disabled', 'disabled').prop('selected', false)
-                                }
-                            }
-                        })
-                    }
-
-                    let slider = $(document).find('.ps-product--quickview .ps-product__images')
-
-                    if (slider.length) {
-                        slider.slick('unslick')
-
-                        let imageHtml = ''
-                        res.data.image_with_sizes.origin.forEach(function(item) {
-                            imageHtml += '<div class="item"><img src="' + item + '" alt="image"/></div>'
-                        })
-
-                        slider.html(imageHtml)
-
-                        slider.slick({
-                            slidesToShow: slider.data('item'),
-                            slidesToScroll: 1,
-                            rtl: isRTL,
-                            infinite: false,
-                            arrows: slider.data('arrow'),
-                            focusOnSelect: true,
-                            prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                            nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                        })
-                    }
-
-                    let product = $('.ps-product--detail')
-                    if (product.length > 0) {
-
-                        let primary = product.find('.ps-product__gallery')
-                        let second = product.find('.ps-product__variants')
-                        let vertical = product
-                            .find('.ps-product__thumbnail')
-                            .data('vertical')
-
-                        if (primary.length) {
-                            primary.slick('unslick')
-
-                            let imageHtml = ''
-                            res.data.image_with_sizes.origin.forEach(function(item) {
-                                imageHtml += '<div class="item"><a href="' + item + '"><img src="' + item + '" alt="' + res.data.name + '"/></a></div>'
-                            })
-
-                            primary.html(imageHtml)
-
-                            primary.slick({
-                                slidesToShow: 1,
-                                slidesToScroll: 1,
-                                rtl: isRTL,
-                                asNavFor: '.ps-product__variants',
-                                fade: true,
-                                dots: false,
-                                infinite: false,
-                                arrows: primary.data('arrow'),
-                                prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                                nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                            })
-                        }
-
-                        if (second.length) {
-
-                            second.slick('unslick')
-
-                            let thumbHtml = ''
-                            res.data.image_with_sizes.thumb.forEach(function(item) {
-                                thumbHtml += '<div class="item"><img src="' + item + '" alt="' + res.data.name + '"/></div>'
-                            })
-
-                            second.html(thumbHtml)
-
-                            second.slick({
-                                slidesToShow: second.data('item'),
-                                slidesToScroll: 1,
-                                rtl: isRTL,
-                                infinite: false,
-                                arrows: second.data('arrow'),
-                                focusOnSelect: true,
-                                prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                                nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                                asNavFor: '.ps-product__gallery',
-                                vertical: vertical,
-                                responsive: [
-                                    {
-                                        breakpoint: 1200,
-                                        settings: {
-                                            arrows: second.data('arrow'),
-                                            slidesToShow: 4,
-                                            vertical: false,
-                                            prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                                            nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                                        },
-                                    },
-                                    {
-                                        breakpoint: 992,
-                                        settings: {
-                                            arrows: second.data('arrow'),
-                                            slidesToShow: 4,
-                                            vertical: false,
-                                            prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                                            nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                                        },
-                                    },
-                                    {
-                                        breakpoint: 480,
-                                        settings: {
-                                            slidesToShow: 3,
-                                            vertical: false,
-                                            prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                                            nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                                        },
-                                    },
-                                ],
-                            })
-                        }
-                    }
-
-                    $(window).trigger('resize')
-
-                    if (product.length > 0) {
-                        let $gallery = product.find('.ps-product__gallery')
-                        if ($gallery.data('lightGallery')) {
-                            $gallery.data('lightGallery').destroy(true)
-                        }
-
-                        $gallery.lightGallery({
-                            selector: '.item a',
-                            thumbnail: true,
-                            share: false,
-                            fullScreen: false,
-                            autoplay: false,
-                            autoplayControls: false,
-                            actualSize: false,
-                        })
-                    }
+                // Handle Martfury-specific elements that may not be covered by the default
+                if (res && !res.error && res.data) {
+                    // Ensure hidden-product-id fields are updated (backup in case the core doesn't handle it)
+                    $('.hidden-product-id').val(res.data.id)
                 }
             }
-        }
+        })
 
         $('.ps-panel--sidebar').show()
         $('.ps-popup').show()
@@ -931,23 +716,20 @@
                 success: res => {
                     if (!res.error) {
                         $('#product-quickview .ps-product--quickview').html(res.data)
-                        $('.ps-product--quickview .ps-product__images').slick({
-                            slidesToShow: 1,
-                            slidesToScroll: 1,
-                            rtl: isRTL,
-                            fade: true,
-                            dots: false,
-                            arrows: true,
-                            infinite: false,
-                            prevArrow: "<button class='slick-prev slick-arrow'><i class='fa fa-angle-left'></i></button>",
-                            nextArrow: "<button class='slick-next slick-arrow'><i class='fa fa-angle-right'></i></button>",
-                        })
+
+                        setTimeout(function() {
+                            if (typeof EcommerceApp !== 'undefined') {
+                                EcommerceApp.initProductGallery(true)
+                            }
+                        }, 200)
 
                         $('#product-quickview').modal('show')
 
                         if (typeof Theme.lazyLoadInstance !== 'undefined') {
                             Theme.lazyLoadInstance.update()
                         }
+
+                        document.dispatchEvent(new CustomEvent('ecommerce.quick-view.initialized'))
                     }
                     _self.removeClass('button-loading')
                 },

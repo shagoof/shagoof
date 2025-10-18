@@ -38,6 +38,7 @@ use Botble\Ecommerce\Services\HandleShippingFeeService;
 use Botble\Ecommerce\Services\HandleTaxService;
 use Botble\Optimize\Facades\OptimizerHelper;
 use Botble\Payment\Enums\PaymentStatusEnum;
+use Botble\Payment\Supports\PaymentFeeHelper;
 use Botble\Payment\Supports\PaymentHelper;
 use Botble\Theme\Facades\Theme;
 use Exception;
@@ -71,7 +72,7 @@ class PublicCheckoutController extends BaseController
         if (! EcommerceHelper::isEnabledGuestCheckout() && ! auth('customer')->check()) {
             return $this
                 ->httpResponse()
-                ->setNextUrl(route('customer.login'));
+                ->setNextUrl(route('customer.login') . '?redirect=' . urlencode($request->fullUrl()));
         }
 
         if ($token !== session('tracked_start_checkout')) {
@@ -130,7 +131,7 @@ class PublicCheckoutController extends BaseController
             return $this
                 ->httpResponse()
                 ->setError()
-                ->setNextUrl(route('customer.login'))
+                ->setNextUrl(route('customer.login') . '?redirect=' . urlencode($request->fullUrl()))
                 ->setMessage(__('Your shopping cart has digital product(s), so you need to sign in to continue!'));
         }
 
@@ -153,6 +154,7 @@ class PublicCheckoutController extends BaseController
         $promotionDiscountAmount = $checkoutOrderData->promotionDiscountAmount;
         $couponDiscountAmount = $checkoutOrderData->couponDiscountAmount;
         $shippingAmount = $checkoutOrderData->shippingAmount;
+        $paymentFee = $checkoutOrderData->paymentFee;
 
         $data = compact(
             'token',
@@ -165,6 +167,7 @@ class PublicCheckoutController extends BaseController
             'sessionCheckoutData',
             'products',
             'isShowAddressForm',
+            'paymentFee',
         );
 
         if (auth('customer')->check()) {
@@ -197,20 +200,25 @@ class PublicCheckoutController extends BaseController
 
         $discounts = apply_filters('ecommerce_checkout_discounts_query', $discountsQuery, $products)->get();
 
-        $rawTotal = Cart::instance('cart')->rawTotal();
-        $orderAmount = max($rawTotal - $promotionDiscountAmount - $couponDiscountAmount, 0);
-        $orderAmount += (float) $shippingAmount;
+        $rawTotal = $checkoutOrderData->rawTotal;
+        $orderAmount = $checkoutOrderData->orderAmount;
 
         $data = [...$data, 'discounts' => $discounts, 'rawTotal' => $rawTotal, 'orderAmount' => $orderAmount];
 
-        app(GoogleTagManager::class)->beginCheckout($products->all(), $orderAmount);
-        app(FacebookPixel::class)->checkout($products->all(), $orderAmount);
+        $productsArray = $products->all();
+
+        app(GoogleTagManager::class)->beginCheckout($productsArray, $orderAmount);
+        app(FacebookPixel::class)->checkout($productsArray, $orderAmount);
 
         $checkoutView = Theme::getThemeNamespace('views.ecommerce.orders.checkout');
 
         if (view()->exists($checkoutView)) {
             return view($checkoutView, $data);
         }
+
+        add_filter('payment_order_total_amount', function () use ($orderAmount, $paymentFee) {
+            return $orderAmount - $paymentFee;
+        }, 120);
 
         return view(
             'plugins/ecommerce::orders.checkout',
@@ -359,6 +367,19 @@ class PublicCheckoutController extends BaseController
 
         $products = Cart::instance('cart')->products();
 
+        // Extract shipping values once to avoid repetition
+        $shippingMethod = $request->input('shipping_method');
+        $shippingOption = $request->input('shipping_option');
+
+        // Convert arrays to strings if needed
+        if (is_array($shippingMethod)) {
+            $shippingMethod = $shippingMethod[0] ?? ShippingMethodEnum::DEFAULT;
+        }
+
+        if (is_array($shippingOption)) {
+            $shippingOption = $shippingOption[0] ?? null;
+        }
+
         if (is_plugin_active('marketplace')) {
             $sessionData = apply_filters(
                 HANDLE_PROCESS_ORDER_DATA_ECOMMERCE,
@@ -382,8 +403,8 @@ class PublicCheckoutController extends BaseController
             $request->merge([
                 'amount' => Cart::instance('cart')->rawTotal(),
                 'user_id' => $currentUserId,
-                'shipping_method' => $request->input('shipping_method', ShippingMethodEnum::DEFAULT),
-                'shipping_option' => $request->input('shipping_option'),
+                'shipping_method' => $shippingMethod ?? ShippingMethodEnum::DEFAULT,
+                'shipping_option' => $shippingOption,
                 'shipping_amount' => 0,
                 'tax_amount' => Cart::instance('cart')->rawTax(),
                 'sub_total' => Cart::instance('cart')->rawSubTotal(),
@@ -438,7 +459,7 @@ class PublicCheckoutController extends BaseController
                     'qty' => $cartItem->qty,
                     'weight' => $weight,
                     'price' => $cartItem->price,
-                    'tax_amount' => $cartItem->tax,
+                    'tax_amount' => $cartItem->taxTotal,
                     'options' => $cartItem->options,
                     'product_type' => $product->product_type,
                 ];
@@ -542,7 +563,7 @@ class PublicCheckoutController extends BaseController
         if (! EcommerceHelper::isEnabledGuestCheckout() && ! auth('customer')->check()) {
             return $this
                 ->httpResponse()
-                ->setNextUrl(route('customer.login'));
+                ->setNextUrl(route('customer.login') . '?redirect=' . urlencode(route('public.checkout.information', $token)));
         }
 
         if (Cart::instance('cart')->isEmpty()) {
@@ -561,7 +582,7 @@ class PublicCheckoutController extends BaseController
             return $this
                 ->httpResponse()
                 ->setError()
-                ->setNextUrl(route('customer.login'))
+                ->setNextUrl(route('customer.login') . '?redirect=' . urlencode(route('public.checkout.information', $token)))
                 ->setMessage(__('Your shopping cart has digital product(s), so you need to sign in to continue!'));
         }
 
@@ -683,6 +704,12 @@ class PublicCheckoutController extends BaseController
 
         $isAvailableShipping = EcommerceHelper::isAvailableShipping($products);
         $shippingMethodInput = $request->input('shipping_method', ShippingMethodEnum::DEFAULT);
+        $shippingOption = $request->input('shipping_option');
+
+        // Convert arrays to strings if needed
+        if (is_array($shippingOption)) {
+            $shippingOption = $shippingOption[0] ?? null;
+        }
 
         $shippingAmount = 0;
         $shippingData = [];
@@ -699,7 +726,7 @@ class PublicCheckoutController extends BaseController
             $shippingMethodData = $shippingFeeService->execute(
                 $shippingData,
                 $shippingMethodInput,
-                $request->input('shipping_option')
+                $shippingOption
             );
 
             $shippingMethod = Arr::first($shippingMethodData);
@@ -735,13 +762,24 @@ class PublicCheckoutController extends BaseController
 
         $orderAmount += (float) $shippingAmount;
 
+        // Add payment fee if applicable
+        $paymentFee = 0;
+        if ($paymentMethod && is_plugin_active('payment')) {
+            $paymentFee = PaymentFeeHelper::calculateFee($paymentMethod, $orderAmount);
+            $orderAmount += $paymentFee;
+        }
+
+        // Store payment fee in request
+        $request->merge(['payment_fee' => $paymentFee]);
+
         $request->merge([
             'amount' => $orderAmount ?: 0,
             'currency' => $request->input('currency', strtoupper(get_application_currency()->title)),
             'user_id' => $currentUserId,
             'shipping_method' => $isAvailableShipping ? $shippingMethodInput : '',
-            'shipping_option' => $isAvailableShipping ? $request->input('shipping_option') : null,
+            'shipping_option' => $isAvailableShipping ? $shippingOption : null,
             'shipping_amount' => (float) $shippingAmount,
+            'payment_fee' => (float) $paymentFee,
             'tax_amount' => Cart::instance('cart')->rawTax(),
             'sub_total' => Cart::instance('cart')->rawSubTotal(),
             'coupon_code' => session('applied_coupon_code'),
@@ -763,7 +801,7 @@ class PublicCheckoutController extends BaseController
             'order_id' => $order->getKey(),
         ]);
 
-        if ($isAvailableShipping) {
+        if ($isAvailableShipping && ! Shipment::query()->where(['order_id' => $order->getKey()])->exists()) {
             Shipment::query()->create([
                 'order_id' => $order->getKey(),
                 'user_id' => 0,
@@ -809,7 +847,7 @@ class PublicCheckoutController extends BaseController
                 'qty' => $cartItem->qty,
                 'weight' => Arr::get($cartItem->options, 'weight', 0),
                 'price' => $cartItem->price,
-                'tax_amount' => $cartItem->tax,
+                'tax_amount' => $cartItem->taxTotal,
                 'options' => $cartItem->options,
                 'product_type' => $product->product_type,
             ];
@@ -969,7 +1007,7 @@ class PublicCheckoutController extends BaseController
         if (! EcommerceHelper::isEnabledGuestCheckout() && ! auth('customer')->check()) {
             return $this
                 ->httpResponse()
-                ->setNextUrl(route('customer.login'));
+                ->setNextUrl(route('customer.login') . '?redirect=' . urlencode(route('public.checkout.information', $token)));
         }
 
         if (is_plugin_active('marketplace')) {

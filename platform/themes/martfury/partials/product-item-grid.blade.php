@@ -1,6 +1,6 @@
 @if ($product)
     <div class="ps-product__thumbnail">
-        <a href="{{ $product->url }}">
+        <a href="{{ $product->url }}" title="{{ $product->name }}">
             {!! RvMedia::image($product->image, $product->name, 'small', lazy: $lazy ?? true) !!}
         </a>
         @if ($product->isOutOfStock())
@@ -25,11 +25,11 @@
     </div>
     <div class="ps-product__container">
         <div class="ps-product__content">
-            <a class="ps-product__title" href="{{ $product->url }}">{!! BaseHelper::clean($product->name) !!}</a>
+            <a class="ps-product__title" href="{{ $product->url }}" title="{{ $product->name }}">{!! BaseHelper::clean($product->name) !!}</a>
             @if (is_plugin_active('marketplace') && $product->store->id)
                 <p class="ps-product__vendor">
                     <span>{{ __('Sold by') }}: </span>
-                    <a href="{{ $product->store->url }}" class="text-uppercase">{{ $product->store->name }}</a>
+                    <a href="{{ $product->store->url }}" class="text-uppercase" title="{{ __('Visit store') }}: {{ $product->store->name }}">{{ $product->store->name }} {!! $product->store->badge !!}</a>
                 </p>
             @endif
             @if (EcommerceHelper::isReviewEnabled())
@@ -51,15 +51,19 @@
                 {!! apply_filters('ecommerce_after_product_price_in_listing', null, $product) !!}
             @endif
             @if (EcommerceHelper::isCartEnabled())
-                <a class="ps-btn add-to-cart-button" data-id="{{ $product->id }}" href="#" data-url="{{ route('public.cart.add-to-cart') }}" {!! EcommerceHelper::jsAttributes('add-to-cart', $product, additional: ['data-bb-toggle' => 'none']) !!}>{{ __('Add to cart') }}</a>
+                @if ($product->has_variation)
+                    <a class="ps-btn" href="#" data-bb-toggle="quick-shop" data-url="{{ route('public.ajax.quick-shop', $product->slug) }}" {!! EcommerceHelper::jsAttributes('quick-shop', $product) !!} title="{{ __('Select Options') }}">{{ __('Select Options') }}</a>
+                @else
+                    <a class="ps-btn add-to-cart-button" data-id="{{ $product->id }}" href="#" data-url="{{ route('public.cart.add-to-cart') }}" {!! EcommerceHelper::jsAttributes('add-to-cart', $product, additional: ['data-bb-toggle' => 'none']) !!} title="{{ __('Add to cart') }}">{{ __('Add to cart') }}</a>
+                @endif
             @endif
             <ul class="ps-product__actions">
                 @if (EcommerceHelper::isWishlistEnabled())
-                    <li><a class="js-add-to-wishlist-button" href="#" data-url="{{ route('public.wishlist.add', $product->id) }}"><i class="icon-heart"></i> {{ __('Wishlist') }}</a></li>
+                    <li><a class="js-add-to-wishlist-button" href="#" data-url="{{ route('public.wishlist.add', $product->id) }}" title="{{ __('Add to Wishlist') }}"><i class="icon-heart"></i> {{ __('Wishlist') }}</a></li>
                 @endif
                 @if (EcommerceHelper::isCompareEnabled())
                     <li>
-                        <a class="js-add-to-compare-button" href="#" data-url="{{ route('public.compare.add', $product->id) }}"><i class="icon-chart-bars"></i>
+                        <a class="js-add-to-compare-button" href="#" data-url="{{ route('public.compare.add', $product->id) }}" title="{{ __('Compare') }}"><i class="icon-chart-bars"></i>
                         {{ __('Compare') }}</a>
                     </li>
                 @endif

@@ -57,13 +57,13 @@
                     <div class="ps-form__content">
                         <h4>{{ theme_option('newsletter_popup_title') ?: __('Get 25% Discount') }}</h4>
                         <p>{{ theme_option('newsletter_popup_description') ?: __('Subscribe to the mailing list to receive updates on new arrivals, special offers and our promotions.') }}</p>
-                        <div class="form-group">
-                            <input class="form-control" name="email" type="email"  placeholder="{{ __('Email Address') }}" required>
+                        <div class="mb-3">
+                            <input class="form-control" name="email" type="email" placeholder="{{ __('Email Address') }}" required>
                         </div>
 
-                        {!! apply_filters('form_extra_fields_render', null, \Botble\Contact\Forms\Fronts\ContactForm::class) !!}
+                        {!! apply_filters('form_extra_fields_render', null, \Botble\Newsletter\Forms\Fronts\NewsletterForm::class) !!}
 
-                        <div class="form-group">
+                        <div class="mb-3">
                             <button class="ps-btn" type="submit" >{{ __('Subscribe') }}</button>
                         </div>
                         <div class="ps-checkbox">
@@ -78,7 +78,7 @@
 
     {!! Theme::get('bottomFooter') !!}
 
-    <div id="back2top"><i class="icon icon-arrow-up"></i></div>
+    <div id="back2top"><i class="icon icon-arrow-up" title="Scroll Up"></i></div>
     <div class="ps-site-overlay"></div>
     @if (is_plugin_active('ecommerce'))
         <div class="ps-search" id="site-search"><a class="ps-btn--close" href="#"></a>
@@ -96,12 +96,14 @@
     @endif
     <div class="modal fade" id="product-quickview" tabindex="-1" role="dialog" aria-labelledby="product-quickview" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content"><span class="modal-close" data-dismiss="modal"><i class="icon-cross2"></i></span>
+            <div class="modal-content"><span class="modal-close" data-bs-dismiss="modal"><i class="icon-cross2"></i></span>
                 <article class="ps-product--detail ps-product--fullwidth ps-product--quickview">
                 </article>
             </div>
         </div>
     </div>
+
+    @include(Theme::getThemeNamespace('views.ecommerce.includes.quick-shop-modal'))
 
     <script>
         window.trans = {

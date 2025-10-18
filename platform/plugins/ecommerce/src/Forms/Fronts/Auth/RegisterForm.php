@@ -46,20 +46,26 @@ class RegisterForm extends AuthForm
                 TextFieldOption::make()
                     ->label(__('Full name'))
                     ->placeholder(__('Your full name'))
+                    ->required()
                     ->icon('ti ti-user')
             )
-            ->add(
-                'email',
-                EmailField::class,
-                EmailFieldOption::make()
-                    ->label(__('Email'))
-                    ->when(EcommerceHelper::isLoginUsingPhone(), function (EmailFieldOption $fieldOption): void {
-                        $fieldOption->label(__('Email (optional)'));
-                    })
-                    ->placeholder(__('Your email'))
-                    ->icon('ti ti-mail')
-                    ->addAttribute('autocomplete', 'email')
-            )
+            ->when(! EcommerceHelper::isLoginUsingPhone() || get_ecommerce_setting('keep_email_field_in_registration_form', true), function (FormAbstract $form): void {
+                $form
+                    ->add(
+                        'email',
+                        EmailField::class,
+                        EmailFieldOption::make()
+                            ->label(__('Email'))
+                            ->when(EcommerceHelper::isLoginUsingPhone(), function (EmailFieldOption $fieldOption): void {
+                                $fieldOption->label(__('Email (optional)'));
+                            }, function (EmailFieldOption $fieldOption): void {
+                                $fieldOption->required();
+                            })
+                            ->placeholder(__('Your email'))
+                            ->icon('ti ti-mail')
+                            ->addAttribute('autocomplete', 'email')
+                    );
+            })
             ->when(get_ecommerce_setting('enabled_phone_field_in_registration_form', true), static function (FormAbstract $form): void {
                 $form
                     ->add(
@@ -84,6 +90,7 @@ class RegisterForm extends AuthForm
                     ->label(__('Password'))
                     ->placeholder(__('Password'))
                     ->icon('ti ti-lock')
+                    ->required()
             )
             ->add(
                 'password_confirmation',
@@ -92,6 +99,7 @@ class RegisterForm extends AuthForm
                     ->label(__('Password confirmation'))
                     ->placeholder(__('Password confirmation'))
                     ->icon('ti ti-lock')
+                    ->required()
             )
             ->add(
                 'agree_terms_and_policy',

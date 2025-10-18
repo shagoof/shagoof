@@ -11,6 +11,7 @@
             </p>
         </div>
     </div>
+    {!! apply_filters('ecommerce_checkout_after_subtotal', null, $products) !!}
     @if (EcommerceHelper::isTaxEnabled())
         <div class="row">
             <div class="col-6">
@@ -68,6 +69,17 @@
             </div>
             <div class="col-6 float-end">
                 <p class="price-text shipping-price-text">{{ format_price($shippingAmount) }}</p>
+            </div>
+        </div>
+    @endif
+
+    @if (isset($paymentFee) && $paymentFee > 0)
+        <div class="row payment-fee-row">
+            <div class="col-6">
+                <p>{{ __('plugins/payment::payment.payment_fee') }}:</p>
+            </div>
+            <div class="col-6 float-end">
+                <p class="price-text payment-fee-text">{{ format_price($paymentFee) }}</p>
             </div>
         </div>
     @endif

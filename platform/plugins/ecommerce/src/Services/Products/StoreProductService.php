@@ -6,6 +6,7 @@ use Botble\Base\Events\CreatedContentEvent;
 use Botble\Base\Events\UpdatedContentEvent;
 use Botble\Base\Facades\BaseHelper;
 use Botble\Ecommerce\Enums\CrossSellPriceType;
+use Botble\Ecommerce\Enums\ProductLicenseCodeStatusEnum;
 use Botble\Ecommerce\Enums\ProductTypeEnum;
 use Botble\Ecommerce\Events\ProductFileUpdatedEvent;
 use Botble\Ecommerce\Events\ProductQuantityUpdatedEvent;
@@ -14,6 +15,8 @@ use Botble\Ecommerce\Models\Option;
 use Botble\Ecommerce\Models\OptionValue;
 use Botble\Ecommerce\Models\Product;
 use Botble\Ecommerce\Models\ProductFile;
+use Botble\Ecommerce\Models\ProductSpecificationAttributeTranslation;
+use Botble\Ecommerce\Models\SpecificationAttribute;
 use Botble\Media\Facades\RvMedia;
 use Botble\Media\Models\MediaFile;
 use Botble\Media\Services\UploadsManager;
@@ -33,10 +36,10 @@ class StoreProductService
     {
         $data = $request->input();
 
-        $hasVariation = $product->variations()->count() > 0;
+        $hasVariation = $product->has_variation;
 
         if ($hasVariation && ! $forceUpdateAll) {
-            $data = $request->except([
+            $excludedFields = [
                 'sku',
                 'quantity',
                 'allow_checkout_when_out_of_stock',
@@ -51,8 +54,14 @@ class StoreProductService
                 'wide',
                 'height',
                 'weight',
-                'generate_license_code',
-            ]);
+            ];
+
+            if (! $product->isTypeDigital()) {
+                $excludedFields[] = 'generate_license_code';
+                $excludedFields[] = 'license_code_type';
+            }
+
+            $data = $request->except($excludedFields);
         }
 
         if ($sku = $request->input('sku')) {
@@ -121,20 +130,30 @@ class StoreProductService
         }
 
         if ($request->has('cross_sale_products')) {
+            $crossSaleProducts = $request->input('cross_sale_products', []);
             $product->crossSales()->detach();
 
-            $crossSaleProducts = $request->input('cross_sale_products', []);
-
-            $crossSaleProducts = array_map(function ($item) {
+            $crossSaleProducts = array_map(function ($item) use ($crossSaleProducts) {
                 unset($item['id']);
 
-                $item['is_variant'] = isset($item['is_variant']) && $item['is_variant'] == '1';
+                $item['is_variant'] = isset($item['is_variant']) && ($item['is_variant'] == '1' || $item['is_variant']);
                 $item['price'] = $item['price'] ?? 0;
                 $item['price_type'] = $item['price_type'] ?? CrossSellPriceType::FIXED;
 
                 if (! $item['is_variant']) {
                     $item['apply_to_all_variations'] = isset($item['apply_to_all_variations']) && $item['apply_to_all_variations'] == '1';
+                } else {
+                    $item['apply_to_all_variations'] = '0';
+
+                    $parentId = $item['parent_id'] ?? null;
+
+                    if ($parentId) {
+                        $item['price'] = $crossSaleProducts[$parentId]['price'] ?? 0;
+                        $item['price_type'] = $crossSaleProducts[$parentId]['price_type'] ?? CrossSellPriceType::FIXED;
+                    }
                 }
+
+                unset($item['parent_id']);
 
                 return $item;
             }, $crossSaleProducts);
@@ -152,14 +171,44 @@ class StoreProductService
             $this->saveProductOptions((array) $request->input('options', []), $product);
         }
 
-        $specificationAttributes = $request->collect('specification_attributes')
-            ->mapWithKeys(fn ($item, $key) => [$key => [
-                'value' => $item['value'] ?? null,
-                'hidden' => $item['hidden'] ?? false,
-                'order' => $item['order'] ?? 0,
-            ]]);
+        $refLang = $request->input('ref_lang');
 
-        $product->specificationAttributes()->sync($specificationAttributes);
+        $isDefaultLanguage = ProductSpecificationAttributeTranslation::isDefaultLanguage($refLang);
+
+        if ($isDefaultLanguage) {
+            $specificationAttributes = $request->collect('specification_attributes')
+                ->mapWithKeys(fn ($item, $key) => [$key => [
+                    'value' => $item['value'] ?? null,
+                    'hidden' => $item['hidden'] ?? false,
+                    'order' => $item['order'] ?? 0,
+                ]]);
+
+            $product->specificationAttributes()->sync($specificationAttributes);
+        } else {
+            $langCode = $refLang;
+            $specificationAttributes = $request->input('specification_attributes', []);
+
+            foreach ($specificationAttributes as $attributeId => $attributeData) {
+                if (isset($attributeData['value'])) {
+                    $attribute = SpecificationAttribute::query()->find($attributeId);
+
+                    if ($attribute) {
+                        ProductSpecificationAttributeTranslation::query()->updateOrCreate(
+                            [
+                                'product_id' => $product->id,
+                                'attribute_id' => $attributeId,
+                                'lang_code' => $langCode,
+                            ],
+                            [
+                                'value' => $attributeData['value'],
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
+        $this->saveLicenseCodes($request, $product);
 
         event(new ProductQuantityUpdatedEvent($product));
 
@@ -168,7 +217,9 @@ class StoreProductService
 
     public function saveProductFiles(Request $request, Product $product, bool $exists = true): Product
     {
-        /** @var Collection<ProductFile> $productFiles */
+        /**
+         * @var Collection<ProductFile> $productFiles
+         */
         $productFiles = collect();
 
         if ($exists) {
@@ -313,6 +364,48 @@ class StoreProductService
             });
         } catch (Exception $exception) {
             info($exception->getMessage());
+        }
+    }
+
+    public function saveLicenseCodes(Request $request, Product $product): void
+    {
+        // Only save license codes for digital products with license code generation enabled
+        if (! $product->isTypeDigital() || ! $product->generate_license_code) {
+            return;
+        }
+
+        // License codes can now be saved for both main products and variations
+
+        $licenseCodes = $request->input('license_codes', []);
+
+        foreach ($licenseCodes as $id => $licenseCodeData) {
+            if (isset($licenseCodeData['_delete'])) {
+                // Delete existing license code
+                if (is_numeric($id)) {
+                    $product->licenseCodes()->where('id', $id)->where('status', ProductLicenseCodeStatusEnum::AVAILABLE)->delete();
+                }
+
+                continue;
+            }
+
+            $code = trim($licenseCodeData['code'] ?? '');
+            if (empty($code)) {
+                continue;
+            }
+
+            if (str_starts_with($id, 'new_')) {
+                // Create new license code
+                $product->licenseCodes()->create([
+                    'license_code' => $code,
+                    'status' => ProductLicenseCodeStatusEnum::AVAILABLE,
+                ]);
+            } else {
+                // Update existing license code (only if it's available)
+                $product->licenseCodes()
+                    ->where('id', $id)
+                    ->where('status', ProductLicenseCodeStatusEnum::AVAILABLE)
+                    ->update(['license_code' => $code]);
+            }
         }
     }
 }

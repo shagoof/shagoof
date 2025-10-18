@@ -1,6 +1,6 @@
 @if (count($crossSellProducts) > 0)
     <div class="ps-section--default ps-customer-bought mt-60">
-        <div class="ps-section__header text-left pb-0 mb-4">
+        <div class="ps-section__header text-start pb-0 mb-4">
             <h3 class="mb-2">{{ __('Customers who bought this item also bought') }}</h3>
         </div>
         <div class="ps-section__content">

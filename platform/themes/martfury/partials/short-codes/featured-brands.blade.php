@@ -11,7 +11,7 @@
              data-owl-auto="true"
              data-owl-loop="false"
              data-owl-speed="10000"
-             data-owl-gap="0"
+             data-owl-gap="30"
              data-owl-nav="false"
              data-owl-dots="true"
              data-owl-item="7"

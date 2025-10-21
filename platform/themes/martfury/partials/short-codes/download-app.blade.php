@@ -22,7 +22,7 @@
                             
                             {{-- Codeavour Egypt Competition Button --}}
                             <div class="codeavour-section">
-                                <a href="https://codeavour-egypt.org" target="_blank" rel="noopener" class="btn-codeavour">
+                                <a href="https://codeavour-egypt.org" target="_blank" rel="noopener" class="btn-codeavour" style="background: linear-gradient(135deg, {{ theme_option('primary_color', '#fcb800') }} 0%, {{ theme_option('secondary_color', '#ff9500') }} 100%); box-shadow: 0 4px 15px {{ theme_option('primary_color', '#fcb800') }}4D;">
                                     <span class="btn-icon">🏆</span>
                                     <div class="btn-content">
                                         <span class="btn-label">Join Competition</span>
@@ -31,18 +31,6 @@
                                     <span class="btn-arrow">→</span>
                                 </a>
                             </div>
-
-                            <form class="ps-form--download-app enhanced-form" action="{{ route('public.ajax.send-download-app-links') }}" method="post">
-                                @csrf
-                                <div class="form-group--nest">
-                                    <input class="form-control" type="email" name="email" placeholder="{{ __('Email Address') }}" required>
-                                    <button class="ps-btn" type="submit">{{ __('Subscribe') }}</button>
-                                </div>
-
-                                @if ($extraFields = apply_filters('form_extra_fields_render', null, \Botble\Newsletter\Forms\Fronts\NewsletterForm::class))
-                                    <div style="margin-top: 15px;">{!! $extraFields !!}</div>
-                                @endif
-                            </form>
                             
                             @if ($androidAppUrl || $iosAppUrl)
                                 <div class="download-links">
@@ -149,21 +137,18 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    background: linear-gradient(135deg, #fcb800 0%, #ff9500 100%);
     color: #fff;
     padding: 18px 30px;
     border-radius: 12px;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(252,184,0,0.3);
     border: 2px solid transparent;
     max-width: 400px;
 }
 
 .btn-codeavour:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(252,184,0,0.4);
-    background: linear-gradient(135deg, #ff9500 0%, #fcb800 100%);
+    filter: brightness(1.1);
     color: #fff;
     text-decoration: none;
     border-color: #fff;
@@ -202,50 +187,6 @@
 
 .btn-codeavour:hover .btn-arrow {
     transform: translateX(5px);
-}
-
-/* Enhanced Form */
-.enhanced-form {
-    margin: 25px 0;
-}
-
-.enhanced-form .form-group--nest {
-    display: flex;
-    gap: 10px;
-    max-width: 500px;
-}
-
-.enhanced-form .form-control {
-    flex: 1;
-    padding: 14px 20px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.enhanced-form .form-control:focus {
-    border-color: #fcb800;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(252,184,0,0.1);
-}
-
-.enhanced-form .ps-btn {
-    padding: 14px 30px;
-    background: #fcb800;
-    color: #222;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.enhanced-form .ps-btn:hover {
-    background: #222;
-    color: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 /* Download Links */
@@ -299,14 +240,6 @@
 }
 
 @media (max-width: 768px) {
-    .enhanced-form .form-group--nest {
-        flex-direction: column;
-    }
-    
-    .enhanced-form .ps-btn {
-        width: 100%;
-    }
-    
     .btn-codeavour {
         padding: 16px 20px;
     }

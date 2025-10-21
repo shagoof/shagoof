@@ -132,7 +132,7 @@ app()->booted(function (): void {
                 $productCollections = get_product_collections(
                     ['status' => BaseStatusEnum::PUBLISHED],
                     [],
-                    ['id', 'name', 'slug']
+                    ['id', 'name', 'slug', 'image']
                 );
 
                 if ($productCollections->isEmpty()) {

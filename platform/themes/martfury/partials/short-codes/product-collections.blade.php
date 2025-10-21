@@ -24,9 +24,12 @@
              data-owl-mousedrag="on"
         >
             @foreach($productCollections->skip(1) as $collection)
-                <a href="{{ $collection->url }}" style="cursor: pointer;" title="{{ $collection->name }}">
-                    <img src="{{ RvMedia::getImageUrl($collection->image, null, false, RvMedia::getDefaultImage()) }}" alt="{{ $collection->name }}" loading="lazy"/>
-                </a>
+                <div class="ps-collection-item text-center">
+                    <a href="{{ $collection->url }}" style="cursor: pointer;" title="{{ $collection->name }}">
+                        <img src="{{ RvMedia::getImageUrl($collection->image, null, false, RvMedia::getDefaultImage()) }}" alt="{{ $collection->name }}" loading="lazy"/>
+                        <p class="ps-collection-name mt-2">{{ $collection->name }}</p>
+                    </a>
+                </div>
             @endforeach
         </div>
     </div>

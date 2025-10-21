@@ -1,27 +1,41 @@
-<div class="ps-download-app">
+<div class="ps-download-app enhanced-download-app">
     <div class="ps-container">
         <div class="ps-block--download-app">
             <div class="container">
-                <div class="row">
-                    <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12 ">
+                <div class="row align-items-center">
+                    <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
                         <div class="ps-block__thumbnail">
-                            {!! RvMedia::image($screenshot, __('Screenshot')) !!}
+                            <div class="app-screenshot-wrapper">
+                                {!! RvMedia::image($screenshot, __('Screenshot')) !!}
+                            </div>
                         </div>
                     </div>
-                    <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12 ">
+                    <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
                         <div class="ps-block__content">
-                            <h3>{!! BaseHelper::clean($title) !!}</h3>
+                            <h3 class="app-title">{!! BaseHelper::clean($title) !!}</h3>
                             @if ($description)
-                                <p>{!! BaseHelper::clean($description) !!}</p>
+                                <p class="app-description">{!! BaseHelper::clean($description) !!}</p>
                             @endif
                             @if ($subtitle)
-                                <p>{!! BaseHelper::clean($subtitle) !!}</p>
+                                <p class="app-subtitle">{!! BaseHelper::clean($subtitle) !!}</p>
                             @endif
-                            <form class="ps-form--download-app" action="{{ route('public.ajax.send-download-app-links') }}" method="post">
+                            
+                            {{-- Codeavour Egypt Competition Button --}}
+                            <div class="codeavour-section">
+                                <a href="https://codeavour-egypt.org" target="_blank" rel="noopener" class="btn-codeavour">
+                                    <span class="btn-icon">🏆</span>
+                                    <div class="btn-content">
+                                        <span class="btn-label">Join Competition</span>
+                                        <span class="btn-title">Codeavour Egypt</span>
+                                    </div>
+                                    <span class="btn-arrow">→</span>
+                                </a>
+                            </div>
+
+                            <form class="ps-form--download-app enhanced-form" action="{{ route('public.ajax.send-download-app-links') }}" method="post">
                                 @csrf
                                 <div class="form-group--nest">
-                                    <input class="form-control" type="email" name="email" placeholder="{{ __('Email Address') }}">
-
+                                    <input class="form-control" type="email" name="email" placeholder="{{ __('Email Address') }}" required>
                                     <button class="ps-btn" type="submit">{{ __('Subscribe') }}</button>
                                 </div>
 
@@ -29,16 +43,21 @@
                                     <div style="margin-top: 15px;">{!! $extraFields !!}</div>
                                 @endif
                             </form>
+                            
                             @if ($androidAppUrl || $iosAppUrl)
-                                <p class="download-link">
+                                <div class="download-links">
                                     @if ($androidAppUrl)
-                                        <a href="{{ (string) $androidAppUrl }}"><img src="{{ Theme::asset()->url('img/google-play.png') }}" alt="{{ __('Google Play') }}"></a>
+                                        <a href="{{ (string) $androidAppUrl }}" class="app-store-link" target="_blank" rel="noopener">
+                                            <img src="{{ Theme::asset()->url('img/google-play.png') }}" alt="{{ __('Google Play') }}">
+                                        </a>
                                     @endif
 
                                     @if ($iosAppUrl)
-                                        <a href="{{ (string) $iosAppUrl }}"><img src="{{ Theme::asset()->url('img/app-store.png') }}" alt="{{ __('App Store') }}"></a>
+                                        <a href="{{ (string) $iosAppUrl }}" class="app-store-link" target="_blank" rel="noopener">
+                                            <img src="{{ Theme::asset()->url('img/app-store.png') }}" alt="{{ __('App Store') }}">
+                                        </a>
                                     @endif
-                                </p>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -47,3 +66,272 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Enhanced Download App Component */
+.enhanced-download-app {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 60px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.enhanced-download-app::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(252,184,0,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.enhanced-download-app .ps-block--download-app {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    padding: 40px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Screenshot */
+.app-screenshot-wrapper {
+    position: relative;
+    text-align: center;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.app-screenshot-wrapper img {
+    max-width: 100%;
+    height: auto;
+    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.2));
+}
+
+/* Content */
+.ps-block__content {
+    padding: 20px;
+}
+
+.app-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 15px;
+    line-height: 1.3;
+}
+
+.app-description {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.app-subtitle {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 25px;
+}
+
+/* Codeavour Egypt Button */
+.codeavour-section {
+    margin: 30px 0;
+}
+
+.btn-codeavour {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(135deg, #fcb800 0%, #ff9500 100%);
+    color: #fff;
+    padding: 18px 30px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(252,184,0,0.3);
+    border: 2px solid transparent;
+    max-width: 400px;
+}
+
+.btn-codeavour:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(252,184,0,0.4);
+    background: linear-gradient(135deg, #ff9500 0%, #fcb800 100%);
+    color: #fff;
+    text-decoration: none;
+    border-color: #fff;
+}
+
+.btn-codeavour .btn-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.btn-codeavour .btn-content {
+    flex: 1;
+    text-align: left;
+}
+
+.btn-codeavour .btn-label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-codeavour .btn-title {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+.btn-codeavour .btn-arrow {
+    font-size: 24px;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+}
+
+.btn-codeavour:hover .btn-arrow {
+    transform: translateX(5px);
+}
+
+/* Enhanced Form */
+.enhanced-form {
+    margin: 25px 0;
+}
+
+.enhanced-form .form-group--nest {
+    display: flex;
+    gap: 10px;
+    max-width: 500px;
+}
+
+.enhanced-form .form-control {
+    flex: 1;
+    padding: 14px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.enhanced-form .form-control:focus {
+    border-color: #fcb800;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(252,184,0,0.1);
+}
+
+.enhanced-form .ps-btn {
+    padding: 14px 30px;
+    background: #fcb800;
+    color: #222;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.enhanced-form .ps-btn:hover {
+    background: #222;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Download Links */
+.download-links {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    flex-wrap: wrap;
+}
+
+.app-store-link {
+    display: inline-block;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.app-store-link img {
+    height: 50px;
+    width: auto;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.app-store-link:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.app-store-link:hover img {
+    transform: scale(1.05);
+}
+
+/* Responsive Design */
+@media (max-width: 991px) {
+    .enhanced-download-app {
+        padding: 40px 0;
+    }
+    
+    .enhanced-download-app .ps-block--download-app {
+        padding: 30px 20px;
+    }
+    
+    .app-screenshot-wrapper {
+        margin-bottom: 30px;
+    }
+    
+    .app-title {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .enhanced-form .form-group--nest {
+        flex-direction: column;
+    }
+    
+    .enhanced-form .ps-btn {
+        width: 100%;
+    }
+    
+    .btn-codeavour {
+        padding: 16px 20px;
+    }
+    
+    .btn-codeavour .btn-title {
+        font-size: 16px;
+    }
+    
+    .app-title {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-codeavour .btn-icon {
+        font-size: 24px;
+    }
+    
+    .download-links {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .app-store-link img {
+        height: 45px;
+    }
+}
+</style>

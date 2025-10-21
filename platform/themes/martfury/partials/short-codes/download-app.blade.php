@@ -22,7 +22,7 @@
                             
                             {{-- Codeavour Egypt Competition Button --}}
                             <div class="codeavour-section">
-                                <a href="https://codeavour-egypt.org" target="_blank" rel="noopener" class="btn-codeavour" style="background: {{ theme_option('primary_color', '#fcb800') }}; box-shadow: 0 4px 15px {{ theme_option('primary_color', '#fcb800') }}4D;">
+                                <a href="https://codeavour-egypt.org" target="_blank" rel="noopener" class="btn-codeavour" style="background: {{ theme_option('secondary_color', '#222222') }}; box-shadow: 0 4px 15px {{ theme_option('secondary_color', '#222222') }}4D;">
                                     <span class="btn-icon">🏆</span>
                                     <div class="btn-content">
                                         <span class="btn-label">Join Competition</span>

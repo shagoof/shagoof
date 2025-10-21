@@ -3,10 +3,13 @@
         <div class="ps-section__header">
             <h3>{{ $title }}</h3>
             <ul class="ps-section__links">
+                @dd($productCollections);
                 @foreach($productCollections as $item)
+                @if (!$loop->first) 
                     <li class="nav-item">
                         <a class="@if ($loop->first) active @endif" href="#" data-url="{{ route('public.ajax.products-by-collection', $item->id, ['limit' => $limit]) }}" title="{{ __('View products in') }} {{ $item->name }}">{{ $item->name }}</a>
                     </li>
+                @endif
                 @endforeach
             </ul>
         </div>

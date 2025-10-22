@@ -69,6 +69,7 @@
              data-owl-item-xl="6"
              data-owl-duration="500"
              data-owl-mousedrag="on"
+             style="display: flex; justify-content: center; align-items: center;"
         >
             @foreach($productCollections->skip(1) as $index => $collection)
                 <div class="ps-collection-item text-center" style="animation-delay: {{ $index * 0.1 }}s;">

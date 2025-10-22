@@ -29,6 +29,7 @@ class ProductCollection extends BaseModel
     protected $casts = [
         'status' => BaseStatusEnum::class,
         'name' => SafeContent::class,
+        'is_featured' => 'boolean',
     ];
 
     protected static function booted(): void

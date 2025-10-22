@@ -130,7 +130,10 @@ app()->booted(function (): void {
             __('Product Collections'),
             function (Shortcode $shortcode) {
                 $productCollections = get_product_collections(
-                    ['status' => BaseStatusEnum::PUBLISHED],
+                    [
+                        'status' => BaseStatusEnum::PUBLISHED,
+                        'is_featured' => true,
+                    ],
                     [],
                     ['id', 'name', 'slug', 'image']
                 );

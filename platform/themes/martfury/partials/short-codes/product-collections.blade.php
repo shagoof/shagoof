@@ -69,13 +69,12 @@
              data-owl-item-xl="6"
              data-owl-duration="500"
              data-owl-mousedrag="on"
-             data-owl-center="true"
         >
             @foreach($productCollections->skip(1) as $index => $collection)
-                <div class="ps-collection-item text-center" style="margin: 0 auto; animation-delay: {{ $index * 0.1 }}s;">
+                <div class="ps-collection-item text-center" style="animation-delay: {{ $index * 0.1 }}s;">
                     <a href="{{ $collection->url }}" style="cursor: pointer; display: flex; flex-direction: column; align-items: center;" title="{{ $collection->name }}">
-                        <img src="{{ RvMedia::getImageUrl($collection->image, null, false, RvMedia::getDefaultImage()) }}" alt="{{ $collection->name }}" loading="lazy" style="margin: 0 auto;"/>
-                        <p class="ps-collection-name mt-2" style="text-align: center;">{{ $collection->name }}</p>
+                        <img src="{{ RvMedia::getImageUrl($collection->image, null, false, RvMedia::getDefaultImage()) }}" alt="{{ $collection->name }}" loading="lazy"/>
+                        <p class="ps-collection-name mt-2">{{ $collection->name }}</p>
                     </a>
                 </div>
             @endforeach

@@ -19,9 +19,9 @@
             >
                 @foreach(get_featured_brands() as $brand)
                     @if($brand->website)
-                        <a href="{{ $brand->website }}">
+                        <a href="{{ $brand->website }}" style="display: flex; align-items: center; justify-content: center;">
                     @endif
-                    <img src="{{ RvMedia::getImageUrl($brand->logo, null, false, RvMedia::getDefaultImage()) }}" alt="{{ $brand->name }}" loading="lazy"/>
+                    <img src="{{ RvMedia::getImageUrl($brand->logo, null, false, RvMedia::getDefaultImage()) }}" alt="{{ $brand->name }}" loading="lazy" style="max-width: 180px; max-height: 120px; width: auto; height: auto; object-fit: contain;"/>
                     @if($brand->website)
                         </a>
                     @endif

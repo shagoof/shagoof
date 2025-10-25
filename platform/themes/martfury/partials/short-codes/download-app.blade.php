@@ -267,4 +267,10 @@
         height: 45px;
     }
 }
+
+@media (max-width: 375px) {
+    .ps-block__content {
+        padding: 0;
+    }
+}
 </style>

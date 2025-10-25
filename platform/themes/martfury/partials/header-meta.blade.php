@@ -25,6 +25,11 @@
             --header-diliver-border-color: {{ BaseHelper::hexToRgba(theme_option('header_text_color', '#000'), 0.15) }};
         }
 
+        /* Global link hover color - use secondary color instead of primary */
+        a:hover {
+            color: var(--color-2nd) !important;
+        }
+
         /* Custom Sidebar Link Hover and Active Styles */
         .widget_sidebar ul li a {
             padding: 5px 10px !important;

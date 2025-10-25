@@ -24,6 +24,52 @@
             --header-text-accent-color: {{ theme_option('header_text_accent_color', '#222222') }};
             --header-diliver-border-color: {{ BaseHelper::hexToRgba(theme_option('header_text_color', '#000'), 0.15) }};
         }
+
+        /* Custom Sidebar Link Hover and Active Styles */
+        .widget_sidebar ul li a {
+            padding: 5px 10px !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .widget_sidebar ul li a:hover {
+            padding-left: 20px !important;
+            color: #fff !important;
+            background-color: var(--color-2nd) !important;
+        }
+
+        .widget_sidebar ul li a:hover:before {
+            color: #fff !important;
+        }
+
+        .widget_sidebar ul li a.active {
+            padding-left: 20px !important;
+            color: #fff !important;
+            background-color: var(--color-2nd) !important;
+            font-weight: 600 !important;
+        }
+
+        .widget_sidebar ul li a.active:before {
+            opacity: 1 !important;
+            visibility: visible !important;
+            color: #fff !important;
+        }
+
+        /* Blog/Shop Categories Widget */
+        .widget--blog.widget--categories ul li a {
+            padding: 6px 10px !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .widget--blog.widget--categories ul li a:hover {
+            color: #fff !important;
+            background-color: var(--color-2nd) !important;
+        }
+
+        .widget--blog.widget--categories ul li.active a {
+            color: #fff !important;
+            background-color: var(--color-2nd) !important;
+            font-weight: 600 !important;
+        }
     </style>
 
     @php

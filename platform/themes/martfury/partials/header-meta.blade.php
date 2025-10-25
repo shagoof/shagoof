@@ -30,6 +30,11 @@
             color: var(--color-2nd) !important;
         }
 
+        /* Product filter active link - use secondary color */
+        .bb-product-filter-link.active {
+            color: var(--color-2nd) !important;
+        }
+
         /* Custom Sidebar Link Hover and Active Styles */
         .widget_sidebar ul li a {
             padding: 5px 10px !important;

@@ -27,6 +27,8 @@ Theme::registerRoutes(function (): void {
                 ->name('products-by-category')
                 ->wherePrimaryKey();
         });
+
+        Route::get('brands', 'brands')->name('public.brands');
     });
 });
 

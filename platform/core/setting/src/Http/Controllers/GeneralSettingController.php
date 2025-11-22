@@ -60,52 +60,24 @@ class GeneralSettingController extends SettingController
             ], 400);
         }
 
-        $invalidMessage = 'Your license is invalid. Please activate your license!';
-
-        if (! $core->hasLicenseData()) {
-            $this
-                ->httpResponse()
-                ->setData([
-                    'html' => view('core/base::system.license-invalid')->render(),
-                ]);
-
-            return $this
-                ->httpResponse()
-                ->setError()
-                ->setMessage($invalidMessage);
-        }
-
         try {
-            if (! $core->verifyLicense(false)) {
-                if (! $core->hasLicenseData()) {
-                    $this
-                        ->httpResponse()
-                        ->setData([
-                            'html' => view('core/base::system.license-invalid')->render(),
-                        ]);
-                }
-
-                return $this
-                    ->httpResponse()
-                    ->setError()
-                    ->setMessage($invalidMessage);
-            }
-
             $activatedAt = $this->getLicenseActivatedDate($core);
 
             $data = [
                 'activated_at' => $activatedAt->format('M d Y'),
-                'licensed_to' => setting('licensed_to'),
+                'licensed_to' => setting('licensed_to') ?: config('app.name'),
             ];
 
             $core->clearLicenseReminder();
 
             return $this
                 ->httpResponse()
-                ->setMessage('Your license is activated.')->setData($data);
+                ->setMessage('Your license is activated.')
+                ->setData($data);
         } catch (Throwable $exception) {
             return $this
                 ->httpResponse()
+                ->setError()
                 ->setMessage($exception->getMessage());
         }
     }
@@ -219,6 +191,10 @@ class GeneralSettingController extends SettingController
                 : Carbon::now();
         }
 
-        return Carbon::createFromTimestamp(filectime($core->getLicenseFilePath()));
+        $licenseFilePath = $core->getLicenseFilePath();
+
+        return file_exists($licenseFilePath)
+            ? Carbon::createFromTimestamp(filectime($licenseFilePath))
+            : Carbon::now();
     }
 }

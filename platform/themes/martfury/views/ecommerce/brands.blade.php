@@ -25,13 +25,7 @@
                                                 >
                                             </a>
                                         </div>
-                                        <div class="ps-product__container">
-                                            <div class="ps-product__content text-center" style="margin-top: 5px;">
-                                                <a class="ps-product__title" href="{{ $brand->url }}">
-                                                    {{ $brand->name }}
-                                                </a>
-                                            </div>
-                                        </div>
+                                        <div class="ps-product__container"></div>
                                     </div>
                                 </div>
                             @endforeach

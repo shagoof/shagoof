@@ -3,3 +3,8 @@
 *.scss linguist-vendored
 *.js linguist-vendored
 CHANGELOG.md export-ignore
+platform/core/base/config/general.php merge=ours
+platform/core/base/src/Supports/Core.php merge=ours
+platform/core/base/src/Supports/Helper.php merge=ours
+platform/core/core.json merge=ours
+platform/core/setting/src/Http/Controllers/GeneralSettingController.php merge=ours

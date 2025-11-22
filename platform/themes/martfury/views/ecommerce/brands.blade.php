@@ -15,7 +15,7 @@
                             @foreach ($brands as $brand)
                                 <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6">
                                     <div class="ps-product">
-                                        <div class="ps-product__thumbnail" style="display: flex; align-items: center; justify-content: center; padding: 10px;">
+                                        <div class="ps-product__thumbnail" style="display: flex; align-items: center; justify-content: center; padding: 10px; min-height: 180px;">
                                             <a href="{{ $brand->url }}">
                                                 <img
                                                     src="{{ RvMedia::getImageUrl($brand->logo, null, false, RvMedia::getDefaultImage()) }}"

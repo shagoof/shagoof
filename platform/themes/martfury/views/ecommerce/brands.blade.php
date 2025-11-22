@@ -15,18 +15,18 @@
                             @foreach ($brands as $brand)
                                 <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6">
                                     <div class="ps-product">
-                                        <div class="ps-product__thumbnail" style="display: flex; align-items: center; justify-content: center; padding: 15px;">
+                                        <div class="ps-product__thumbnail" style="display: flex; align-items: center; justify-content: center; padding: 10px;">
                                             <a href="{{ $brand->url }}">
                                                 <img
                                                     src="{{ RvMedia::getImageUrl($brand->logo, null, false, RvMedia::getDefaultImage()) }}"
                                                     alt="{{ $brand->name }}"
                                                     loading="lazy"
-                                                    style="max-height: 100px; width: auto; object-fit: contain;"
+                                                    style="max-width: 180px; max-height: 140px; width: 100%; object-fit: contain;"
                                                 >
                                             </a>
                                         </div>
                                         <div class="ps-product__container">
-                                            <div class="ps-product__content text-center">
+                                            <div class="ps-product__content text-center" style="margin-top: 5px;">
                                                 <a class="ps-product__title" href="{{ $brand->url }}">
                                                     {{ $brand->name }}
                                                 </a>

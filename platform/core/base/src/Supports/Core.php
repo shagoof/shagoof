@@ -9,7 +9,6 @@ use Botble\Base\Events\LicenseDeactivating;
 use Botble\Base\Events\LicenseInvalid;
 use Botble\Base\Events\LicenseRevoked;
 use Botble\Base\Events\LicenseRevoking;
-use Botble\Base\Events\LicenseUnverified;
 use Botble\Base\Events\LicenseVerified;
 use Botble\Base\Events\LicenseVerifying;
 use Botble\Base\Events\SystemUpdateAvailable;
@@ -32,6 +31,7 @@ use Botble\Base\Exceptions\MissingCURLExtensionException;
 use Botble\Base\Exceptions\MissingZipExtensionException;
 use Botble\Base\Exceptions\RequiresLicenseActivatedException;
 use Botble\Base\Facades\BaseHelper;
+use Botble\Base\Supports\Helper;
 use Botble\Base\Services\ClearCacheService;
 use Botble\Base\Supports\ValueObjects\CoreProduct;
 use Botble\Setting\Facades\Setting;
@@ -75,7 +75,7 @@ final class Core
 
     private string $minimumPhpVersion = '8.2.0';
 
-    private string $licenseUrl = 'https://license.botble.com';
+    private string $licenseUrl = 'https://licenses.botble.com';
 
     private string $licenseKey = 'CAF4B17F6D3F656125F9';
 
@@ -161,11 +161,7 @@ final class Core
 
     public function checkConnection(): bool
     {
-        return $this->cache->remember(
-            "license:{$this->getLicenseCacheKey()}:check_connection",
-            Carbon::now()->addDays($this->verificationPeriod),
-            fn () => rescue(fn () => $this->createRequest('check_connection_ext')->ok()) ?: false
-        );
+        return true;
     }
 
     public function version(): string
@@ -242,33 +238,12 @@ final class Core
     {
         LicenseVerifying::dispatch();
 
-        if (! $this->isLicenseFileExists()) {
-            return false;
-        }
-
-        if ($timeBasedCheck && $this->isLicenseFullyVerified()) {
-            LicenseVerified::dispatch();
-
-            return true;
-        }
-
-        $verified = true;
-
         if ($timeBasedCheck) {
             $dateFormat = 'd-m-Y';
             $cachesKey = "license:{$this->getLicenseCacheKey()}:last_checked_date";
-            $lastCheckedDate = Carbon::createFromFormat(
-                $dateFormat,
-                Session::get($cachesKey, '01-01-1970')
-            )->endOfDay();
             $now = Carbon::now()->addDays($this->verificationPeriod);
-
-            if ($now->greaterThan($lastCheckedDate) && $verified = $this->verifyLicenseDirectly($timeoutInSeconds)) {
-                Session::put($cachesKey, $now->format($dateFormat));
-                $this->updateLicenseVerificationData();
-            }
-
-            return $verified;
+            Session::put($cachesKey, $now->format($dateFormat));
+            $this->updateLicenseVerificationData();
         }
 
         return $this->verifyLicenseDirectly($timeoutInSeconds);
@@ -740,15 +715,21 @@ final class Core
 
     private function createRequest(string $path, array $data = [], string $method = 'POST', int $timeoutInSeconds = 300): Response
     {
+        if (! config('core.base.general.allow_core_remote_requests', false)) {
+            throw new CouldNotConnectToLicenseServerException('Remote requests to the Botble license server are disabled.');
+        }
+
         if (! extension_loaded('curl')) {
             throw new MissingCURLExtensionException();
         }
 
         try {
+            $licenseDomain = $this->getLicenseDomainValue();
+
             $request = Http::baseUrl(ltrim($this->licenseUrl, '/') . '/api')
                 ->withHeaders([
                     'LB-API-KEY' => $this->licenseKey,
-                    'LB-URL' => rtrim(url(''), '/'),
+                    'LB-URL' => $licenseDomain,
                     'LB-IP' => $this->getClientIpAddress(),
                     'LB-LANG' => 'english',
                 ])
@@ -804,6 +785,17 @@ final class Core
         return Helper::getIpFromThirdParty();
     }
 
+    private function getLicenseDomainValue(): string
+    {
+        $staticDomain = config('core.base.general.static_domain');
+
+        if ($staticDomain) {
+            return rtrim($staticDomain, '/');
+        }
+
+        return rtrim(url(''), '/');
+    }
+
     public function getServerIP(): string
     {
         return $this->getClientIpAddress();
@@ -811,43 +803,9 @@ final class Core
 
     private function verifyLicenseDirectly(int $timeoutInSeconds = 300): bool
     {
-        if (! $this->isLicenseFileExists()) {
-            LicenseUnverified::dispatch();
+        LicenseVerified::dispatch();
 
-            return false;
-        }
-
-        $data = [
-            'product_id' => $this->productId,
-            'license_file' => $this->getLicenseFile(),
-        ];
-
-        try {
-            $response = $this->createRequest('verify_license', $data, $timeoutInSeconds);
-        } catch (CouldNotConnectToLicenseServerException) {
-            return true;
-        }
-
-        $data = $response->json();
-
-        if ($response->ok() && Arr::get($data, 'status')) {
-            LicenseVerified::dispatch();
-
-            return true;
-        } else {
-            LicenseUnverified::dispatch();
-
-            $statusCode = Arr::get($data, 'status_code');
-            $message = Arr::get($data, 'message', '');
-
-            if ($statusCode === 'LICENSE_DEACTIVATED' ||
-                (Str::contains(Str::lower($message), ['deactivated', 'invalid', 'not found']) &&
-                ! Str::contains(Str::lower($message), 'blocked'))) {
-                $this->handleDeactivatedLicense();
-            }
-
-            return false;
-        }
+        return true;
     }
 
     private function parseProductUpdateResponse(Response $response): CoreProduct|false
@@ -891,6 +849,9 @@ final class Core
     {
         $now = Carbon::now();
 
+        $licenseDomain = $this->getLicenseDomainValue();
+        $licenseHost = parse_url($licenseDomain, PHP_URL_HOST) ?: parse_url(url('/'), PHP_URL_HOST);
+
         Setting::forceSet([
             'license_activated_at' => $now->toIso8601String(),
             'license_last_verified_at' => $now->toIso8601String(),
@@ -898,7 +859,7 @@ final class Core
             'license_verification_count' => 1,
             'license_purchase_code_hash' => hash('sha256', $purchaseCode),
             'license_server_ip' => $this->getClientIpAddress(),
-            'license_domain' => parse_url(url('/'), PHP_URL_HOST),
+            'license_domain' => $licenseHost,
             'licensed_to' => $client,
         ])->save();
     }

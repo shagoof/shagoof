@@ -145,6 +145,10 @@ class Helper
     {
         $defaultIpAddress = Request::ip() ?: '127.0.0.1';
 
+        if (! config('core.base.general.allow_core_remote_requests', false)) {
+            return $defaultIpAddress;
+        }
+
         try {
             $ip = trim(Http::withoutVerifying()->get('https://ipecho.net/plain')->body());
 

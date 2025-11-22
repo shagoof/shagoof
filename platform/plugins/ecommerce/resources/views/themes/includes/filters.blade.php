@@ -18,6 +18,8 @@
                 @include(EcommerceHelper::viewPath('includes.filters.brands'))
             @endif
 
+            @include(EcommerceHelper::viewPath('includes.filters.collections'))
+
             @if (EcommerceHelper::isEnabledFilterProductsByTags())
                 @include(EcommerceHelper::viewPath('includes.filters.tags'))
             @endif

@@ -16,20 +16,6 @@
         >
     @endforeach
 
-    @if (request()->has('collections'))
-        @php
-            $collections = EcommerceHelper::parseFilterParams(request(), 'collections');
-        @endphp
-        @foreach ($collections as $collection)
-            <input
-                name="collections[]"
-                type="hidden"
-                class="product-filter-item"
-                value="{{ $collection }}"
-            >
-        @endforeach
-    @endif
-
     @if (request()->has('categories') && ! isset($category))
         @php
             $categories = EcommerceHelper::parseFilterParams(request(), 'categories');

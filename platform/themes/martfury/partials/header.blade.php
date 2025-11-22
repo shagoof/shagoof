@@ -23,7 +23,6 @@
                 <div class="loader-section section-right"></div>
             </div>
         @endif
-Ahmed Ayman
         {!! Theme::get('topHeader') !!}
 
         <header class="header header--1" data-sticky="{{ Theme::get('stickyHeader', theme_option('sticky_header_enabled', 'yes') == 'yes' ? 'true' : 'false') }}">

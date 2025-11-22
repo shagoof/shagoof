@@ -18,6 +18,7 @@ use Botble\Base\Forms\Fields\SelectField;
 use Botble\Base\Forms\Fields\TextareaField;
 use Botble\Base\Forms\Fields\TextField;
 use Botble\Ecommerce\Facades\EcommerceHelper;
+use Botble\Ecommerce\Models\Brand;
 use Botble\Ecommerce\Models\FlashSale;
 use Botble\Ecommerce\Models\ProductCategory;
 use Botble\Ecommerce\Repositories\Interfaces\ProductInterface;
@@ -290,6 +291,50 @@ app()->booted(function (): void {
         });
 
         shortcode()->registerLoadingState('trending-products', Theme::getThemeNamespace('partials.short-codes.trending-products-skeleton'));
+
+        add_shortcode(
+            'brands_grid',
+            __('Brands grid'),
+            __('Display all brands in a grid'),
+            function (Shortcode $shortcode) {
+                $limit = (int) $shortcode->limit ?: 0;
+
+                $query = Brand::query()
+                    ->where('status', BaseStatusEnum::PUBLISHED)
+                    ->orderBy('name');
+
+                if ($limit > 0) {
+                    $query->limit($limit);
+                }
+
+                $brands = $query->get();
+
+                return Theme::partial('short-codes.brands-grid', [
+                    'title' => $shortcode->title,
+                    'brands' => $brands,
+                ]);
+            }
+        );
+
+        shortcode()->setAdminConfig('brands_grid', function (array $attributes) {
+            return ShortcodeForm::createFromArray($attributes)
+                ->withLazyLoading()
+                ->add(
+                    'title',
+                    TextField::class,
+                    TextFieldOption::make()
+                        ->label(__('Title'))
+                        ->placeholder(__('Title'))
+                )
+                ->add(
+                    'limit',
+                    NumberField::class,
+                    NumberFieldOption::make()
+                        ->label(__('Limit (0 = all)'))
+                        ->placeholder(__('Limit'))
+                        ->defaultValue(0)
+                );
+        });
 
         add_shortcode('flash-sale', __('Flash sale'), __('Flash sale'), function ($shortCode) {
             if (! $shortCode->flash_sale_id) {

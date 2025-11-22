@@ -1,4 +1,17 @@
 {!! Theme::partial('header-meta') !!}
+    @php
+        $host = request()->getHost();
+        $scheme = request()->getScheme();
+        $currentCountry = 'UAE';
+        if (strpos($host, 'eg.') === 0) {
+            $currentCountry = 'Egypt';
+        } elseif (strpos($host, 'sa.') === 0) {
+            $currentCountry = 'KSA';
+        }
+        
+        $currentPath = request()->getRequestUri();
+    @endphp
+
     <body {!! Theme::bodyAttributes() !!} @if (Theme::get('pageId')) id="{{ Theme::get('pageId') }}" @endif>
         {!! apply_filters(THEME_FRONT_BODY, null) !!}
         <div id="alert-container"></div>
@@ -124,6 +137,24 @@ Ahmed Ayman
                                         </div>
                                     </li>
                                 @endif
+
+                                <li class="country-switcher">
+                                    <div class="ps-dropdown">
+                                        <a href="#"><span>{{ $currentCountry }}</span></a>
+                                        <ul class="ps-dropdown-menu">
+                                            <li>
+                                                <a href="{{ $scheme }}://eg.shagoof.com{{ $currentPath }}">Egypt</a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ $scheme }}://sa.shagoof.com{{ $currentPath }}">KSA</a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ $scheme }}://uae.shagoof.com{{ $currentPath }}">UAE</a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </li>
+
                                 @if (is_plugin_active('language'))
                                     {!! Theme::partial('language-switcher') !!}
                                 @endif

@@ -284,6 +284,64 @@
                             @endif
                         @endfor
                     </aside>
+
+                    @if (!empty($product->video))
+                        <aside class="widget widget_product ps-product__video">
+                            <h3 class="widget-title">{{ __('Product video') }}</h3>
+
+                            @php
+                                $sidebarVideo = collect($product->video)->firstWhere('url');
+                            @endphp
+
+                            @if ($sidebarVideo)
+                                @switch($sidebarVideo['provider'])
+                                    @case('video')
+                                        @php
+                                            $fileExtension = File::extension($sidebarVideo['url']) ?: 'mp4';
+                                            if ($fileExtension === 'mov') {
+                                                $fileExtension = 'mp4';
+                                            }
+                                        @endphp
+
+                                        <video
+                                            controls
+                                            playsinline="playsinline"
+                                            class="media-video"
+                                            aria-label="{{ $product->name }}"
+                                            poster="{{ $sidebarVideo['thumbnail'] }}"
+                                            style="width: 100%; border-radius: 8px;"
+                                        >
+                                            <source src="{{ $sidebarVideo['url'] }}" type="video/{{ $fileExtension }}">
+                                        </video>
+                                        @break
+
+                                    @case('youtube')
+                                    @case('vimeo')
+                                        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px;">
+                                            <iframe
+                                                src="{{ $sidebarVideo['url'] }}"
+                                                allowfullscreen
+                                                frameborder="0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                title="{{ $product->name }} Video"
+                                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                                            ></iframe>
+                                        </div>
+                                        @break
+
+                                    @default
+                                        <a href="{{ $sidebarVideo['url'] }}" target="_blank" rel="noopener">
+                                            <img
+                                                src="{{ $sidebarVideo['thumbnail'] }}"
+                                                alt="{{ $product->name }}"
+                                                style="width: 100%; border-radius: 8px;"
+                                            >
+                                        </a>
+                                @endswitch
+                            @endif
+                        </aside>
+                    @endif
+
                     @if (is_plugin_active('ads'))
                         <aside class="widget">
                             {!! AdsManager::display('product-sidebar', ['class' => 'mb-3'], false) !!}

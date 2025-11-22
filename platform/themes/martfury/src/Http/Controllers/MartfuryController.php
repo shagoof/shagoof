@@ -6,11 +6,13 @@ use Botble\Base\Enums\BaseStatusEnum;
 use Botble\Base\Facades\BaseHelper;
 use Botble\Base\Facades\EmailHandler;
 use Botble\Base\Http\Responses\BaseHttpResponse;
+use Botble\Ecommerce\Models\Brand;
 use Botble\Ecommerce\Facades\Cart;
 use Botble\Ecommerce\Facades\EcommerceHelper;
 use Botble\Ecommerce\Repositories\Interfaces\ProductCategoryInterface;
 use Botble\Ecommerce\Repositories\Interfaces\ProductInterface;
 use Botble\Ecommerce\Services\Products\GetProductService;
+use Botble\SeoHelper\Facades\SeoHelper;
 use Botble\Newsletter\Forms\Fronts\NewsletterForm;
 use Botble\Theme\Facades\Theme;
 use Botble\Theme\Http\Controllers\PublicController;
@@ -157,5 +159,21 @@ class MartfuryController extends PublicController
         }
 
         return $this->httpResponse->setData($data);
+    }
+
+    public function brands()
+    {
+        $brands = Brand::query()
+            ->where('status', BaseStatusEnum::PUBLISHED)
+            ->orderBy('name')
+            ->get();
+
+        SeoHelper::setTitle(__('Brands'));
+
+        Theme::breadcrumb()
+            ->add(__('Home'), route('public.index'))
+            ->add(__('Brands'));
+
+        return Theme::scope('ecommerce.brands', compact('brands'))->render();
     }
 }

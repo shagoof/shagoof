@@ -1,0 +1,13 @@
+{
+    "id": "botble/bulk-price",
+    "name": "Bulk Price",
+    "namespace": "Botble\\BulkPrice\\",
+    "provider": "Botble\\BulkPrice\\Providers\\BulkPriceServiceProvider",
+    "author": "Ahmed Ayman",
+    "url": "https://maksoudaa.com",
+    "version": "1.0.0",
+    "description": "Bulk update product prices by percentage or fixed amount with filters.",
+    "minimum_core_version": "7.3.0"
+}
+
+
